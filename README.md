@@ -29,24 +29,101 @@ IndexTTS-2.5 is a major upgrade over IndexTTS-2 with four key improvements:
 2. Search for "BSAI_ComfyUI_IndexTTS-2.5"
 3. Click Install
 
+The `install.py` script will automatically handle all dependencies, including installing `indextts` from GitHub source and applying the transformers 5.x compatibility shim.
+
 ### Method 2: Manual
 
 1. Clone this repository into your `ComfyUI/custom_nodes/` directory:
    ```bash
    cd ComfyUI/custom_nodes
-   git clone https://github.com/BSAI-AI/BSAI_ComfyUI_IndexTTS-2.5.git
+   git clone https://github.com/xm6018924/BSAI_ComfyUI_IndexTTS-2.5.git
    ```
 
-2. Install dependencies:
+2. Run the installation script:
    ```bash
    # Windows (ComfyUI portable)
-   .\python_embeded\python.exe -m pip install -r BSAI_ComfyUI_IndexTTS-2.5/requirements.txt
+   .\python\python.exe BSAI_ComfyUI_IndexTTS-2.5/install.py
 
-   # Or use your ComfyUI Python environment
-   pip install -r BSAI_ComfyUI_IndexTTS-2.5/requirements.txt
+   # Or use the batch file
+   BSAI_ComfyUI_IndexTTS-2.5\install_bsai_indextts.bat
    ```
 
 3. Restart ComfyUI
+
+### Method 3: Manual step-by-step (if install.py fails)
+
+If the automated installation fails, you can install manually:
+
+```bash
+# 1. Install hatchling build tool (may not be on Chinese mirrors)
+pip install hatchling --index-url https://pypi.org/simple/
+
+# 2. Install indextts from GitHub (NOT on PyPI)
+pip install --no-deps --ignore-requires-python --no-build-isolation git+https://github.com/index-tts/index-tts.git
+
+# 3. Install missing dependencies (use --index-url if Chinese mirror is missing packages)
+pip install cn2an descript-audiotools fugashi unidic-lite g2p_en json5 keras munch textstat --index-url https://pypi.org/simple/
+
+# 4. Fix protobuf version
+pip install "protobuf>=5.26.1,<6" --index-url https://pypi.org/simple/
+```
+
+The transformers 5.x compatibility shim (`indextts_compat.py`) is applied automatically when ComfyUI loads the node.
+
+## Troubleshooting
+
+### Installation fails with "Could not find a version that satisfies the requirement indextts"
+
+**Cause**: `indextts` is not published on PyPI. It must be installed from GitHub source.
+
+**Fix**: Use `install.py` or `install_bsai_indextts.bat`, or follow Method 3 above.
+
+### Installation fails with "Cannot find command 'git'"
+
+**Cause**: Git is not in the system PATH.
+
+**Fix**: Add Git to PATH or specify the full path:
+```bash
+set PATH=C:\Program Files\Git\cmd;%PATH%
+pip install --no-deps --ignore-requires-python --no-build-isolation git+https://github.com/index-tts/index-tts.git
+```
+
+### Node fails to load with "cannot import name 'OffloadedCache' from 'transformers.cache_utils'"
+
+**Cause**: `indextts` was built for transformers 4.52.1, but your environment has transformers 5.x. Many internal APIs were removed or renamed in transformers 5.0.
+
+**Fix**: The compatibility shim (`indextts_compat.py`) handles this automatically. If you still see this error:
+1. Ensure `indextts_compat.py` exists in the node directory
+2. Restart ComfyUI (the shim is applied on node load)
+3. Or manually run: `python install.py`
+
+### "hatchling" build dependency not found
+
+**Cause**: The Chinese PyPI mirror (清华源) may not have `hatchling>=1.27.0`.
+
+**Fix**: Use the official PyPI index:
+```bash
+pip install hatchling --index-url https://pypi.org/simple/
+```
+
+### protobuf version conflicts
+
+**Cause**: `descript-audiotools` requires protobuf <3.20, but other packages need protobuf >=4.
+
+**Fix**: Use protobuf 5.x (works at runtime despite the version warning):
+```bash
+pip install "protobuf>=5.26.1,<6"
+```
+
+### Python version incompatibility (Python 3.12+)
+
+**Cause**: `indextts` requires Python >=3.10,<3.12, but newer ComfyUI environments use Python 3.13+.
+
+**Fix**: Use `--ignore-requires-python` flag when installing indextts:
+```bash
+pip install --no-deps --ignore-requires-python --no-build-isolation git+https://github.com/index-tts/index-tts.git
+```
+The compatibility shim handles the transformers API differences; Python 3.13 compatibility is maintained through the shim.
 
 ## Model Download
 

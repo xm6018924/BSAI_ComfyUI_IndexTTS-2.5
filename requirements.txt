@@ -1,10 +1,11 @@
 # BSAI_ComfyUI_IndexTTS-2.5 dependencies
 # Install these in your ComfyUI Python environment
 
-# Core TTS engine
-indextts>=2.0.0
+# Core TTS engine (NOT on PyPI - installed from GitHub source)
+# indextts is installed via: pip install --no-deps --ignore-requires-python --no-build-isolation git+https://github.com/index-tts/index-tts.git
+# See install_bsai_indextts.bat for automated installation
 
-# Audio processing
+# Audio processing (already included in ComfyUI environment)
 torchaudio>=2.0.0
 numpy>=1.24.0
 
