@@ -1,0 +1,22 @@
+# BSAI_ComfyUI_IndexTTS-2.5 dependencies
+# Install these in your ComfyUI Python environment
+
+# Core TTS engine
+indextts>=2.0.0
+
+# Audio processing
+torchaudio>=2.0.0
+numpy>=1.24.0
+
+# Config
+omegaconf>=2.3.0
+
+# Model download (at least one should be available)
+modelscope>=1.18.0
+huggingface_hub[cli,hf_xet]>=0.25.0
+
+# Optional: DeepSpeed for faster inference (Linux recommended)
+# deepspeed>=0.14.0
+
+# Optional: Flash attention for GPT2 acceleration
+# flash-attn>=2.5.0

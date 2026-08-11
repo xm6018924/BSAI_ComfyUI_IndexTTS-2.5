@@ -1,0 +1,92 @@
+{
+  "last_node_id": 6,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "BSAI_IndexTTS2Loader",
+      "pos": [0, 0],
+      "size": [320, 120],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "widgets_values": [true, "auto", false],
+      "color": "#16727c",
+      "bgcolor": "#4F0074"
+    },
+    {
+      "id": 2,
+      "type": "LoadAudio",
+      "pos": [0, 200],
+      "size": [320, 80],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "widgets_values": ["reference.wav", "audio"],
+      "color": "#226",
+      "bgcolor": "#336"
+    },
+    {
+      "id": 3,
+      "type": "BSAI_IndexTTS2Synthesis",
+      "pos": [400, 50],
+      "size": [400, 450],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "widgets_values": [
+        "Hello, this is a test of IndexTTS-2 voice cloning. I can speak in any voice you provide as reference audio.",
+        true, 100, 600, 1.0, 0.8, 30, 0.0, 3, 10.0, true, false
+      ],
+      "inputs": [
+        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 1},
+        {"name": "reference_audio", "type": "AUDIO", "link": 2}
+      ],
+      "color": "#16727c",
+      "bgcolor": "#4F0074"
+    },
+    {
+      "id": 4,
+      "type": "BSAI_IndexTTS2SaveAudio",
+      "pos": [850, 50],
+      "size": [320, 130],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "widgets_values": ["BSAI_IndexTTS2", "wav", 192, 1.0],
+      "inputs": [
+        {"name": "audio", "type": "AUDIO", "link": 3}
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 5,
+      "type": "PreviewAudio",
+      "pos": [850, 250],
+      "size": [320, 80],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "widgets_values": [],
+      "inputs": [
+        {"name": "audio", "type": "AUDIO", "link": 4}
+      ]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 3, 0, "INDEX_TTS_MODEL"],
+    [2, 2, 0, 3, 2, "AUDIO"],
+    [3, 3, 0, 4, 0, "AUDIO"],
+    [4, 3, 0, 5, 0, "AUDIO"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "info": {
+      "name": "BSAI IndexTTS-2.5 Default Workflow",
+      "description": "Voice cloning TTS: load model -> reference audio -> synthesize -> save/preview"
+    }
+  },
+  "version": 0.4
+}
