@@ -99,9 +99,72 @@ def _audio_tensor_to_dict(waveform, sample_rate):
     return {"waveform": waveform.cpu(), "sample_rate": sample_rate}
 
 
+def _save_audio_file(path, waveform, sample_rate, fmt=None):
+    """Save audio file, using soundfile as fallback when torchcodec is unavailable.
+
+    torchaudio 2.11+ requires torchcodec for save/load. This helper tries
+    torchaudio first, then falls back to soundfile (which is pre-installed).
+    """
+    # Try torchaudio.save first (uses torchcodec if available)
+    try:
+        if fmt:
+            torchaudio.save(path, waveform.cpu(), sample_rate, format=fmt)
+        else:
+            torchaudio.save(path, waveform.cpu(), sample_rate)
+        return
+    except (ImportError, RuntimeError):
+        pass
+
+    # Fallback to soundfile
+    import soundfile as sf
+    wav_np = waveform.cpu().numpy()
+    # torchaudio: (channels, samples), soundfile: (samples, channels)
+    if wav_np.ndim == 2:
+        wav_np = wav_np.T
+    elif wav_np.ndim == 1:
+        wav_np = wav_np.reshape(-1, 1)
+
+    # Determine soundfile format from fmt or file extension
+    sf_fmt = None
+    ext_lower = path.lower().rsplit('.', 1)[-1] if '.' in path else ''
+    target = (fmt or ext_lower).lower() if (fmt or ext_lower) else 'wav'
+    if target == 'flac':
+        sf_fmt = 'FLAC'
+    elif target == 'mp3':
+        sf_fmt = 'MP3'
+
+    try:
+        if sf_fmt:
+            sf.write(path, wav_np, sample_rate, format=sf_fmt)
+        else:
+            sf.write(path, wav_np, sample_rate)
+    except Exception as e:
+        # If MP3 fails (libsndfile too old), save as WAV
+        if target == 'mp3':
+            wav_path = path.rsplit('.', 1)[0] + '.wav'
+            sf.write(wav_path, wav_np, sample_rate)
+            print(f"[BSAI_IndexTTS2.5] MP3 save failed ({e}), saved as WAV: {wav_path}")
+            return wav_path
+        raise
+
+
 def _load_audio_file(audio_path, target_sr=24000):
-    """Load an audio file and return waveform tensor and sample rate."""
-    waveform, sr = torchaudio.load(audio_path)
+    """Load an audio file and return waveform tensor and sample rate.
+
+    Uses soundfile as fallback when torchaudio.load requires torchcodec.
+    """
+    try:
+        waveform, sr = torchaudio.load(audio_path)
+    except (ImportError, RuntimeError):
+        # Fallback to soundfile
+        import soundfile as sf
+        data, sr = sf.read(audio_path)  # (samples, channels) numpy
+        waveform = torch.from_numpy(data).float()
+        if waveform.dim() == 1:
+            waveform = waveform.unsqueeze(0)  # (1, samples)
+        else:
+            waveform = waveform.T  # (samples, channels) -> (channels, samples)
+
     # Convert to mono
     if waveform.shape[0] > 1:
         waveform = waveform.mean(dim=0, keepdim=True)
@@ -236,7 +299,7 @@ class BSAI_IndexTTS2_5Synthesis:
         out_audio_path = os.path.join(temp_dir, "output.wav")
 
         # Save reference audio
-        torchaudio.save(ref_audio_path, ref_waveform.cpu(), ref_sr)
+        _save_audio_file(ref_audio_path, ref_waveform, ref_sr)
         print(f"[BSAI_IndexTTS2.5] Reference audio saved: {ref_audio_path} (sr={ref_sr})")
 
         # Build generation kwargs for v2.5 infer()
@@ -263,11 +326,20 @@ class BSAI_IndexTTS2_5Synthesis:
                 **generation_kwargs,
             )
 
-            # Load generated audio
+            # Load generated audio (with soundfile fallback for torchaudio 2.11+)
             if not os.path.exists(out_audio_path):
                 raise RuntimeError("TTS inference completed but output file not found.")
 
-            audio_waveform, audio_sr = torchaudio.load(out_audio_path)
+            try:
+                audio_waveform, audio_sr = torchaudio.load(out_audio_path)
+            except (ImportError, RuntimeError):
+                import soundfile as sf
+                data, audio_sr = sf.read(out_audio_path)
+                audio_waveform = torch.from_numpy(data).float()
+                if audio_waveform.dim() == 1:
+                    audio_waveform = audio_waveform.unsqueeze(0)
+                else:
+                    audio_waveform = audio_waveform.T
             # Convert to mono if needed
             if audio_waveform.shape[0] > 1:
                 audio_waveform = audio_waveform.mean(dim=0, keepdim=True)
@@ -350,20 +422,14 @@ class BSAI_IndexTTS2_5SaveAudio:
 
         # Save audio
         if format == "wav":
-            torchaudio.save(filepath, waveform.cpu(), sample_rate)
+            _save_audio_file(filepath, waveform, sample_rate)
         elif format == "flac":
-            torchaudio.save(filepath, waveform.cpu(), sample_rate, format="flac")
+            _save_audio_file(filepath, waveform, sample_rate, fmt="flac")
         elif format == "mp3":
-            # torchaudio supports mp3 with ffmpeg backend
-            try:
-                torchaudio.save(filepath, waveform.cpu(), sample_rate, format="mp3",
-                                bits_per_sample=mp3_bitrate * 1000)
-            except Exception:
-                # Fallback: save as wav and convert
-                wav_path = filepath.replace(".mp3", ".wav")
-                torchaudio.save(wav_path, waveform.cpu(), sample_rate)
-                filepath = wav_path
-                print("[BSAI_IndexTTS2.5] MP3 encoding failed, saved as WAV instead.")
+            # Try MP3, fallback to WAV
+            result = _save_audio_file(filepath, waveform, sample_rate, fmt="mp3")
+            if result and result != filepath:
+                filepath = result
 
         print(f"[BSAI_IndexTTS2.5] Audio saved: {filepath}")
         return (filepath,)
@@ -397,25 +463,11 @@ class BSAI_IndexTTS2_5UnloadModel:
 # ===========================================================================
 #  Node Mappings
 # ===========================================================================
-# Primary type names use dots (e.g. "BSAI_IndexTTS2.5Loader").
-# Aliases without dots are registered for backward compatibility with
-# older workflow files that used "BSAI_IndexTTS2Loader" etc.
 NODE_CLASS_MAPPINGS = {
-    # Primary (with .5)
     "BSAI_IndexTTS2.5Loader": BSAI_IndexTTS2_5Loader,
     "BSAI_IndexTTS2.5Synthesis": BSAI_IndexTTS2_5Synthesis,
     "BSAI_IndexTTS2.5SaveAudio": BSAI_IndexTTS2_5SaveAudio,
     "BSAI_IndexTTS2.5UnloadModel": BSAI_IndexTTS2_5UnloadModel,
-    # Backward-compatible aliases (without .5 — used in example workflow)
-    "BSAI_IndexTTS2Loader": BSAI_IndexTTS2_5Loader,
-    "BSAI_IndexTTS2Synthesis": BSAI_IndexTTS2_5Synthesis,
-    "BSAI_IndexTTS2SaveAudio": BSAI_IndexTTS2_5SaveAudio,
-    "BSAI_IndexTTS2UnloadModel": BSAI_IndexTTS2_5UnloadModel,
-    # Underscore aliases (convention-friendly)
-    "BSAI_IndexTTS2_5Loader": BSAI_IndexTTS2_5Loader,
-    "BSAI_IndexTTS2_5Synthesis": BSAI_IndexTTS2_5Synthesis,
-    "BSAI_IndexTTS2_5SaveAudio": BSAI_IndexTTS2_5SaveAudio,
-    "BSAI_IndexTTS2_5UnloadModel": BSAI_IndexTTS2_5UnloadModel,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -423,13 +475,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "BSAI_IndexTTS2.5Synthesis": "BSAI IndexTTS2.5 Synthesis",
     "BSAI_IndexTTS2.5SaveAudio": "BSAI IndexTTS2.5 Save Audio",
     "BSAI_IndexTTS2.5UnloadModel": "BSAI IndexTTS2.5 Unload Model",
-    # Display names for aliases
-    "BSAI_IndexTTS2Loader": "BSAI IndexTTS2.5 Loader",
-    "BSAI_IndexTTS2Synthesis": "BSAI IndexTTS2.5 Synthesis",
-    "BSAI_IndexTTS2SaveAudio": "BSAI IndexTTS2.5 Save Audio",
-    "BSAI_IndexTTS2UnloadModel": "BSAI IndexTTS2.5 Unload Model",
-    "BSAI_IndexTTS2_5Loader": "BSAI IndexTTS2.5 Loader",
-    "BSAI_IndexTTS2_5Synthesis": "BSAI IndexTTS2.5 Synthesis",
-    "BSAI_IndexTTS2_5SaveAudio": "BSAI IndexTTS2.5 Save Audio",
-    "BSAI_IndexTTS2_5UnloadModel": "BSAI IndexTTS2.5 Unload Model",
 }
