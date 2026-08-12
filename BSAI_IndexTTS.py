@@ -29,7 +29,7 @@ _INDEXTTS_INSTANCE = None
 _INDEXTTS_MODEL_DIR = None
 
 
-def _get_indextts(use_fp16=True, device=None):
+def _get_indextts(use_bf16=True, device=None):
     """Get or create the IndexTTS singleton instance."""
     global _INDEXTTS_INSTANCE, _INDEXTTS_MODEL_DIR
 
@@ -50,11 +50,11 @@ def _get_indextts(use_fp16=True, device=None):
 
     print(f"[BSAI_IndexTTS2.5] Loading IndexTTS-2.5 model from: {model_dir}")
     print(f"[BSAI_IndexTTS2.5] Config: {cfg_path}")
-    print(f"[BSAI_IndexTTS2.5] FP16: {use_fp16}, Device: {device or 'auto'}")
+    print(f"[BSAI_IndexTTS2.5] BF16: {use_bf16}, Device: {device or 'auto'}")
 
-    # Import indextts (lazy import)
+    # Import indextts v2.5 (lazy import)
     try:
-        from indextts.infer import IndexTTS
+        from indextts.infer_v2_5 import IndexTTS2
     except ImportError:
         print("[BSAI_IndexTTS2.5] indextts package not found, installing...")
         import subprocess
@@ -62,12 +62,12 @@ def _get_indextts(use_fp16=True, device=None):
             [sys.executable, "-m", "pip", "install", "-q", "indextts"],
             check=False,
         )
-        from indextts.infer import IndexTTS
+        from indextts.infer_v2_5 import IndexTTS2
 
-    tts = IndexTTS(
+    tts = IndexTTS2(
         cfg_path=cfg_path,
         model_dir=model_dir,
-        use_fp16=use_fp16,
+        use_bf16=use_bf16,
         device=device,
     )
 
@@ -125,7 +125,7 @@ class BSAI_IndexTTS2_5Loader:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "use_fp16": ("BOOLEAN", {"default": True}),
+                "use_bf16": ("BOOLEAN", {"default": True}),
                 "device": (["auto", "cuda:0", "cpu"], {"default": "auto"}),
             },
             "optional": {
@@ -138,12 +138,12 @@ class BSAI_IndexTTS2_5Loader:
     FUNCTION = "load_model"
     CATEGORY = "BSAI"
 
-    def load_model(self, use_fp16=True, device="auto", force_reload=False):
+    def load_model(self, use_bf16=True, device="auto", force_reload=False):
         if force_reload:
             _unload_indextts()
 
         device = None if device == "auto" else device
-        tts = _get_indextts(use_fp16=use_fp16, device=device)
+        tts = _get_indextts(use_bf16=use_bf16, device=device)
         return (tts,)
 
 
@@ -166,17 +166,17 @@ class BSAI_IndexTTS2_5Synthesis:
                     "multiline": True,
                 }),
                 "reference_audio": ("AUDIO",),
+                "lang": (["ZH", "EN", "JA", "ES", "zhen"], {"default": "ZH"}),
             },
             "optional": {
-                "use_fast_inference": ("BOOLEAN", {"default": True}),
                 "max_text_tokens_per_segment": ("INT", {
                     "default": 100, "min": 20, "max": 600, "step": 10,
                 }),
                 "max_mel_tokens": ("INT", {
-                    "default": 600, "min": 100, "max": 1815, "step": 50,
+                    "default": 1500, "min": 100, "max": 1815, "step": 50,
                 }),
                 "temperature": ("FLOAT", {
-                    "default": 1.0, "min": 0.1, "max": 2.0, "step": 0.05,
+                    "default": 0.8, "min": 0.1, "max": 2.0, "step": 0.05,
                 }),
                 "top_p": ("FLOAT", {
                     "default": 0.8, "min": 0.1, "max": 1.0, "step": 0.05,
@@ -193,7 +193,7 @@ class BSAI_IndexTTS2_5Synthesis:
                 "repetition_penalty": ("FLOAT", {
                     "default": 10.0, "min": 1.0, "max": 20.0, "step": 0.5,
                 }),
-                "remove_silence": ("BOOLEAN", {"default": True}),
+                "do_sample": ("BOOLEAN", {"default": True}),
                 "verbose": ("BOOLEAN", {"default": False}),
             },
         }
@@ -208,16 +208,16 @@ class BSAI_IndexTTS2_5Synthesis:
         tts_model,
         text,
         reference_audio,
-        use_fast_inference=True,
+        lang="ZH",
         max_text_tokens_per_segment=100,
-        max_mel_tokens=600,
-        temperature=1.0,
+        max_mel_tokens=1500,
+        temperature=0.8,
         top_p=0.8,
         top_k=30,
         length_penalty=0.0,
         num_beams=3,
         repetition_penalty=10.0,
-        remove_silence=True,
+        do_sample=True,
         verbose=False,
     ):
         if not text or not text.strip():
@@ -239,7 +239,7 @@ class BSAI_IndexTTS2_5Synthesis:
         torchaudio.save(ref_audio_path, ref_waveform.cpu(), ref_sr)
         print(f"[BSAI_IndexTTS2.5] Reference audio saved: {ref_audio_path} (sr={ref_sr})")
 
-        # Build generation kwargs
+        # Build generation kwargs for v2.5 infer()
         generation_kwargs = {
             "temperature": temperature,
             "top_p": top_p,
@@ -248,36 +248,20 @@ class BSAI_IndexTTS2_5Synthesis:
             "num_beams": num_beams,
             "repetition_penalty": repetition_penalty,
             "max_mel_tokens": max_mel_tokens,
-            "do_sample": True,
+            "do_sample": do_sample,
         }
 
         try:
-            if use_fast_inference:
-                print("[BSAI_IndexTTS2.5] Using fast inference mode...")
-                tts_model.infer_fast(
-                    audio_prompt=ref_audio_path,
-                    text=text,
-                    output_path=out_audio_path,
-                    verbose=verbose,
-                    max_text_tokens_per_segment=max_text_tokens_per_segment,
-                    **generation_kwargs,
-                )
-            else:
-                print("[BSAI_IndexTTS2.5] Using standard inference mode...")
-                # Build parameters for standard infer
-                params = {
-                    "verbose": verbose,
-                    **generation_kwargs,
-                }
-                # Check if infer method supports remove_silence
-                if remove_silence:
-                    params["remove_long_silence"] = True
-                tts_model.infer(
-                    audio_prompt=ref_audio_path,
-                    text=text,
-                    output_path=out_audio_path,
-                    **params,
-                )
+            print(f"[BSAI_IndexTTS2.5] Synthesizing (lang={lang})...")
+            tts_model.infer(
+                spk_audio_prompt=ref_audio_path,
+                text=text,
+                output_path=out_audio_path,
+                lang=lang,
+                verbose=verbose,
+                max_text_tokens_per_segment=max_text_tokens_per_segment,
+                **generation_kwargs,
+            )
 
             # Load generated audio
             if not os.path.exists(out_audio_path):
@@ -292,7 +276,7 @@ class BSAI_IndexTTS2_5Synthesis:
             audio_dict = _audio_tensor_to_dict(audio_waveform, audio_sr)
 
             duration = audio_waveform.shape[-1] / audio_sr
-            status = f"Success | Duration: {duration:.2f}s | Sample Rate: {audio_sr}Hz | Mode: {'fast' if use_fast_inference else 'standard'}"
+            status = f"Success | Duration: {duration:.2f}s | Sample Rate: {audio_sr}Hz | Lang: {lang}"
             print(f"[BSAI_IndexTTS2.5] {status}")
 
             return (audio_dict, status)

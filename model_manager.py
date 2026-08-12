@@ -40,31 +40,30 @@ def get_config_path(model_dir=None):
 
 
 def check_model_exists(model_dir=None):
-    """Check if the IndexTTS-2.5 model files exist locally."""
+    """Check if the IndexTTS-2.5 model files exist locally.
+
+    IndexTTS-2.5 model repo structure (from ModelScope/HuggingFace):
+      config.yaml, gpt.pth, s2mel.pth, codec.pth, feat1.pt, feat2.pt,
+      wav2vec2bert_stats.pt, multilingual_zh_ja_yue_char_del.tiktoken,
+      qwen0.6bemo4-merge/ (directory)
+
+    Note: bpe.model and bigvgan are NOT in the v2.5 model repo.
+    BigVGAN and campplus are downloaded on-demand by the indextts library
+    itself into hf_cache/ during model initialisation.
+    """
     if model_dir is None:
         model_dir = get_model_dir()
 
-    # Key files that must exist
+    # Core model files required by IndexTTS v2.5
     required_files = [
         "config.yaml",
         "gpt.pth",
         "s2mel.pth",
-        "bpe.model",
+        "codec.pth",
     ]
 
     for f in required_files:
         if not os.path.exists(os.path.join(model_dir, f)):
-            return False
-
-    # Check for bigvgan directory or bigvgan checkpoint
-    bigvgan_dir = os.path.join(model_dir, "bigvgan")
-    if not os.path.exists(bigvgan_dir):
-        # Maybe bigvgan_checkpoint is a file in model_dir
-        has_bigvgan = any(
-            f.startswith("bigvgan") and f.endswith((".pth", ".pt", ".safetensors"))
-            for f in os.listdir(model_dir) if os.path.isfile(os.path.join(model_dir, f))
-        ) if os.path.exists(model_dir) else False
-        if not has_bigvgan:
             return False
 
     return True
