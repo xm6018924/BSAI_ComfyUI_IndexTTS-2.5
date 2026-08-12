@@ -93,9 +93,14 @@ def _unload_indextts():
 #  Helper: audio tensor <-> file conversion
 # ---------------------------------------------------------------------------
 def _audio_tensor_to_dict(waveform, sample_rate):
-    """Convert a raw waveform tensor to ComfyUI AUDIO dict format."""
+    """Convert a raw waveform tensor to ComfyUI AUDIO dict format.
+
+    ComfyUI AUDIO format: (batch, channels, samples) 3D tensor.
+    """
     if waveform.dim() == 1:
-        waveform = waveform.unsqueeze(0)  # [1, T]
+        waveform = waveform.unsqueeze(0).unsqueeze(0)  # [1, 1, T]
+    elif waveform.dim() == 2:
+        waveform = waveform.unsqueeze(0)  # [1, C, T]
     return {"waveform": waveform.cpu(), "sample_rate": sample_rate}
 
 
@@ -118,6 +123,9 @@ def _save_audio_file(path, waveform, sample_rate, fmt=None):
     # Fallback to soundfile
     import soundfile as sf
     wav_np = waveform.cpu().numpy()
+    # Handle 3D (batch, channels, samples) -> squeeze batch dimension
+    if wav_np.ndim == 3:
+        wav_np = wav_np[0]  # (channels, samples)
     # torchaudio: (channels, samples), soundfile: (samples, channels)
     if wav_np.ndim == 2:
         wav_np = wav_np.T
@@ -290,8 +298,10 @@ class BSAI_IndexTTS2_5Synthesis:
         ref_waveform = reference_audio["waveform"]
         ref_sr = reference_audio["sample_rate"]
 
-        # Ensure 2D shape [1, T]
-        if ref_waveform.dim() == 1:
+        # Ensure 2D shape [channels, samples] (ComfyUI AUDIO is 3D: batch/channels/samples)
+        if ref_waveform.dim() == 3:
+            ref_waveform = ref_waveform[0]  # Remove batch dim
+        elif ref_waveform.dim() == 1:
             ref_waveform = ref_waveform.unsqueeze(0)
 
         temp_dir = tempfile.mkdtemp(prefix="bsai_indextts2_5_")
