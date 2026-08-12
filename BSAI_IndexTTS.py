@@ -23,6 +23,51 @@ from .model_manager import ensure_model_available, get_model_dir, get_config_pat
 
 
 # ---------------------------------------------------------------------------
+# Monkey-patch torchaudio.save/load to use soundfile fallback
+# torchaudio 2.11+ requires torchcodec for save/load, which may not be
+# installed. This patch makes ALL torchaudio.save/load calls (including
+# from indextts library internals) fall back to soundfile automatically.
+# ---------------------------------------------------------------------------
+_torchaudio_save_orig = torchaudio.save
+_torchaudio_load_orig = torchaudio.load
+
+
+def _torchaudio_save_patched(filepath, src, sample_rate, **kwargs):
+    """Wrap torchaudio.save with soundfile fallback."""
+    try:
+        return _torchaudio_save_orig(filepath, src, sample_rate, **kwargs)
+    except (ImportError, RuntimeError):
+        import soundfile as sf
+        wav_np = src.cpu().numpy() if hasattr(src, 'cpu') else np.array(src)
+        if wav_np.ndim == 3:
+            wav_np = wav_np[0]  # squeeze batch dim
+        if wav_np.ndim == 2:
+            wav_np = wav_np.T  # (channels, samples) -> (samples, channels)
+        elif wav_np.ndim == 1:
+            wav_np = wav_np.reshape(-1, 1)
+        sf.write(filepath, wav_np, sample_rate)
+
+
+def _torchaudio_load_patched(filepath, **kwargs):
+    """Wrap torchaudio.load with soundfile fallback."""
+    try:
+        return _torchaudio_load_orig(filepath, **kwargs)
+    except (ImportError, RuntimeError):
+        import soundfile as sf
+        data, sr = sf.read(filepath)
+        waveform = torch.from_numpy(data).float()
+        if waveform.dim() == 1:
+            waveform = waveform.unsqueeze(0)
+        else:
+            waveform = waveform.T  # (samples, channels) -> (channels, samples)
+        return waveform, sr
+
+
+torchaudio.save = _torchaudio_save_patched
+torchaudio.load = _torchaudio_load_patched
+
+
+# ---------------------------------------------------------------------------
 #  Lazy import of indextts package (it's heavy, so only import when needed)
 # ---------------------------------------------------------------------------
 _INDEXTTS_INSTANCE = None
