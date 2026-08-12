@@ -413,11 +413,25 @@ class BSAI_IndexTTS2_5UnloadModel:
 # ===========================================================================
 #  Node Mappings
 # ===========================================================================
+# Primary type names use dots (e.g. "BSAI_IndexTTS2.5Loader").
+# Aliases without dots are registered for backward compatibility with
+# older workflow files that used "BSAI_IndexTTS2Loader" etc.
 NODE_CLASS_MAPPINGS = {
+    # Primary (with .5)
     "BSAI_IndexTTS2.5Loader": BSAI_IndexTTS2_5Loader,
     "BSAI_IndexTTS2.5Synthesis": BSAI_IndexTTS2_5Synthesis,
     "BSAI_IndexTTS2.5SaveAudio": BSAI_IndexTTS2_5SaveAudio,
     "BSAI_IndexTTS2.5UnloadModel": BSAI_IndexTTS2_5UnloadModel,
+    # Backward-compatible aliases (without .5 — used in example workflow)
+    "BSAI_IndexTTS2Loader": BSAI_IndexTTS2_5Loader,
+    "BSAI_IndexTTS2Synthesis": BSAI_IndexTTS2_5Synthesis,
+    "BSAI_IndexTTS2SaveAudio": BSAI_IndexTTS2_5SaveAudio,
+    "BSAI_IndexTTS2UnloadModel": BSAI_IndexTTS2_5UnloadModel,
+    # Underscore aliases (convention-friendly)
+    "BSAI_IndexTTS2_5Loader": BSAI_IndexTTS2_5Loader,
+    "BSAI_IndexTTS2_5Synthesis": BSAI_IndexTTS2_5Synthesis,
+    "BSAI_IndexTTS2_5SaveAudio": BSAI_IndexTTS2_5SaveAudio,
+    "BSAI_IndexTTS2_5UnloadModel": BSAI_IndexTTS2_5UnloadModel,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -425,4 +439,13 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "BSAI_IndexTTS2.5Synthesis": "BSAI IndexTTS2.5 Synthesis",
     "BSAI_IndexTTS2.5SaveAudio": "BSAI IndexTTS2.5 Save Audio",
     "BSAI_IndexTTS2.5UnloadModel": "BSAI IndexTTS2.5 Unload Model",
+    # Display names for aliases
+    "BSAI_IndexTTS2Loader": "BSAI IndexTTS2.5 Loader",
+    "BSAI_IndexTTS2Synthesis": "BSAI IndexTTS2.5 Synthesis",
+    "BSAI_IndexTTS2SaveAudio": "BSAI IndexTTS2.5 Save Audio",
+    "BSAI_IndexTTS2UnloadModel": "BSAI IndexTTS2.5 Unload Model",
+    "BSAI_IndexTTS2_5Loader": "BSAI IndexTTS2.5 Loader",
+    "BSAI_IndexTTS2_5Synthesis": "BSAI IndexTTS2.5 Synthesis",
+    "BSAI_IndexTTS2_5SaveAudio": "BSAI IndexTTS2.5 Save Audio",
+    "BSAI_IndexTTS2_5UnloadModel": "BSAI IndexTTS2.5 Unload Model",
 }

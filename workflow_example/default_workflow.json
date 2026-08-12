@@ -4,7 +4,7 @@
   "nodes": [
     {
       "id": 1,
-      "type": "BSAI_IndexTTS2Loader",
+      "type": "BSAI_IndexTTS2.5Loader",
       "pos": [0, 0],
       "size": [320, 120],
       "flags": {},
@@ -28,7 +28,7 @@
     },
     {
       "id": 3,
-      "type": "BSAI_IndexTTS2Synthesis",
+      "type": "BSAI_IndexTTS2.5Synthesis",
       "pos": [400, 50],
       "size": [400, 450],
       "flags": {},
@@ -47,7 +47,7 @@
     },
     {
       "id": 4,
-      "type": "BSAI_IndexTTS2SaveAudio",
+      "type": "BSAI_IndexTTS2.5SaveAudio",
       "pos": [850, 50],
       "size": [320, 130],
       "flags": {},
