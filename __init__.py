@@ -20,29 +20,83 @@ import shutil
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Compatibility shim: ensure indextts works with transformers 5.x
+# Compatibility shim management: ensure indextts works with transformers 5.x
 # This runs every time ComfyUI loads the node, so it survives indextts updates.
 # ---------------------------------------------------------------------------
 def _ensure_compat_shim():
-    """Ensure the transformers 5.x compatibility shim is installed in indextts."""
+    """Ensure the transformers 5.x compatibility shim is installed in indextts.
+
+    For transformers 5.x: install/update the shim.
+    For transformers 4.x: remove any stale shim that may have been left from
+    a previous transformers 5.x installation.
+    """
     try:
         import transformers
         tf_major = int(transformers.__version__.split('.')[0])
     except Exception:
         return  # Can't check, let it fail naturally
 
-    if tf_major < 5:
-        return  # transformers 4.x, no shim needed
-
     try:
         import indextts
         indextts_dir = os.path.dirname(indextts.__file__)
+    except ImportError:
+        return  # indextts not installed yet
+    except Exception:
+        return
 
-        # Path to the compat shim bundled with this node
-        node_dir = os.path.dirname(os.path.abspath(__file__))
-        compat_src = os.path.join(node_dir, "indextts_compat.py")
-        compat_dst = os.path.join(indextts_dir, "_compat.py")
+    compat_dst = os.path.join(indextts_dir, "_compat.py")
+    init_path = os.path.join(indextts_dir, "__init__.py")
+    node_dir = os.path.dirname(os.path.abspath(__file__))
+    compat_src = os.path.join(node_dir, "indextts_compat.py")
 
+    # ------------------------------------------------------------------
+    # For transformers 4.x: clean up any stale shim
+    # ------------------------------------------------------------------
+    if tf_major < 5:
+        # Remove the _compat.py file
+        if os.path.exists(compat_dst):
+            try:
+                os.remove(compat_dst)
+                logger.info("[BSAI_IndexTTS2.5] Removed stale transformers 5.x compat shim (transformers 4.x detected)")
+            except Exception:
+                pass
+
+        # Remove cached .pyc
+        pyc_path = os.path.join(indextts_dir, "__pycache__", "_compat.cpython-313.pyc")
+        if os.path.exists(pyc_path):
+            try:
+                os.remove(pyc_path)
+            except Exception:
+                pass
+
+        # Unpatch __init__.py: remove the "from . import _compat" line
+        if os.path.exists(init_path):
+            try:
+                with open(init_path, 'r', encoding='utf-8') as f:
+                    init_content = f.read()
+                if '_compat' in init_content:
+                    lines = init_content.split('\n')
+                    cleaned_lines = [l for l in lines if '_compat' not in l]
+                    # Remove leading empty/comment-only lines that were part of the patch
+                    while cleaned_lines and (cleaned_lines[0].strip().startswith('#') or not cleaned_lines[0].strip()):
+                        if 'compat' in cleaned_lines[0].lower():
+                            cleaned_lines.pop(0)
+                        else:
+                            break
+                    cleaned = '\n'.join(cleaned_lines).strip()
+                    if not cleaned:
+                        cleaned = "# indextts package\n"
+                    with open(init_path, 'w', encoding='utf-8') as f:
+                        f.write(cleaned + '\n')
+                    logger.info("[BSAI_IndexTTS2.5] Unpatched indextts __init__.py (removed stale compat import)")
+            except Exception:
+                pass
+        return  # transformers 4.x, no shim needed
+
+    # ------------------------------------------------------------------
+    # For transformers 5.x: install/update the shim
+    # ------------------------------------------------------------------
+    try:
         # Copy shim if it doesn't exist or is outdated
         need_copy = True
         if os.path.exists(compat_dst) and os.path.exists(compat_src):
@@ -55,7 +109,6 @@ def _ensure_compat_shim():
             logger.info("[BSAI_IndexTTS2.5] Updated transformers 5.x compat shim")
 
         # Patch indextts __init__.py to load compat first
-        init_path = os.path.join(indextts_dir, "__init__.py")
         if os.path.exists(init_path):
             with open(init_path, 'r', encoding='utf-8') as f:
                 init_content = f.read()
@@ -68,11 +121,6 @@ def _ensure_compat_shim():
                     )
                     logger.info("[BSAI_IndexTTS2.5] Patched indextts __init__.py for transformers 5.x")
 
-    except ImportError:
-        logger.warning(
-            "[BSAI_IndexTTS2.5] indextts package not found. "
-            "Please run install.py or install_bsai_indextts.bat"
-        )
     except Exception as e:
         logger.warning(f"[BSAI_IndexTTS2.5] Could not apply compat shim: {e}")
 
