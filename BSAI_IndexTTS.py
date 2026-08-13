@@ -74,6 +74,41 @@ _INDEXTTS_INSTANCE = None
 _INDEXTTS_MODEL_DIR = None
 
 
+def _reapply_compat_shim():
+    """Re-apply the transformers 5.x compat shim after indextts is installed."""
+    import shutil
+    try:
+        import transformers
+        tf_major = int(transformers.__version__.split('.')[0])
+    except Exception:
+        return
+    if tf_major < 5:
+        return
+    try:
+        import indextts
+        indextts_dir = os.path.dirname(indextts.__file__)
+    except ImportError:
+        return
+    node_dir = os.path.dirname(os.path.abspath(__file__))
+    compat_src = os.path.join(node_dir, "indextts_compat.py")
+    compat_dst = os.path.join(indextts_dir, "_compat.py")
+    init_path = os.path.join(indextts_dir, "__init__.py")
+    if os.path.exists(compat_src):
+        shutil.copy2(compat_src, compat_dst)
+        print(f"[BSAI_IndexTTS2.5] Copied compat shim to: {compat_dst}")
+    if os.path.exists(init_path):
+        with open(init_path, 'r', encoding='utf-8') as f:
+            init_content = f.read()
+        if '_compat' not in init_content:
+            with open(init_path, 'w', encoding='utf-8') as f:
+                f.write(
+                    "# Load compatibility shim first (for transformers 5.x)\n"
+                    "from . import _compat  # noqa: F401\n"
+                    + init_content
+                )
+            print("[BSAI_IndexTTS2.5] Patched indextts __init__.py for compat")
+
+
 def _get_indextts(use_bf16=True, device=None):
     """Get or create the IndexTTS singleton instance."""
     global _INDEXTTS_INSTANCE, _INDEXTTS_MODEL_DIR
@@ -100,33 +135,79 @@ def _get_indextts(use_bf16=True, device=None):
     # Import indextts v2.5 (lazy import)
     try:
         from indextts.infer_v2_5 import IndexTTS2
-    except ImportError:
-        print("[BSAI_IndexTTS2.5] indextts not found, running install.py...")
+    except ImportError as _import_err:
+        _import_err_msg = str(_import_err)
+        print(f"[BSAI_IndexTTS2.5] ImportError: {_import_err_msg}")
+        print("[BSAI_IndexTTS2.5] indextts not available, attempting auto-install...")
+
+        # Diagnostic: check if indextts package exists at all
+        try:
+            import indextts
+            print(f"[BSAI_IndexTTS2.5] indextts package found at: {indextts.__file__}")
+            # Package exists but infer_v2_5 missing — likely wrong version
+            import os as _os
+            _pkg_dir = _os.path.dirname(indextts.__file__)
+            _files = _os.listdir(_pkg_dir) if _os.path.isdir(_pkg_dir) else []
+            print(f"[BSAI_IndexTTS2.5] indextts package files: {_files}")
+            if 'infer_v2_5.py' not in _files:
+                print("[BSAI_IndexTTS2.5] WARNING: infer_v2_5.py not found in indextts package!")
+                print("[BSAI_IndexTTS2.5] The installed indextts version may be too old. Reinstalling...")
+        except ImportError:
+            print("[BSAI_IndexTTS2.5] indextts package NOT installed")
+
         import subprocess
         node_dir = os.path.dirname(os.path.abspath(__file__))
         install_script = os.path.join(node_dir, "install.py")
+
         if os.path.exists(install_script):
-            subprocess.run(
+            print(f"[BSAI_IndexTTS2.5] Running install.py with {sys.executable}...")
+            result = subprocess.run(
                 [sys.executable, install_script],
                 cwd=node_dir,
+                capture_output=True,
+                text=True,
                 check=False,
             )
+            # Print install output so user can see what happened
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+            print(f"[BSAI_IndexTTS2.5] install.py exited with code: {result.returncode}")
         else:
-            # Last resort: install from GitHub zip (no git required)
-            subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-q",
-                 "--ignore-requires-python",
+            print("[BSAI_IndexTTS2.5] install.py not found, trying direct pip install...")
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install",
+                 "--no-deps", "--ignore-requires-python",
                  "https://github.com/index-tts/index-tts/archive/refs/heads/main.zip"],
+                capture_output=True,
+                text=True,
                 check=False,
             )
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+
+        # Re-apply compat shim after install
+        try:
+            _reapply_compat_shim()
+        except Exception as _e:
+            print(f"[BSAI_IndexTTS2.5] Warning: could not apply compat shim: {_e}")
+
+        # Try importing again
         try:
             from indextts.infer_v2_5 import IndexTTS2
-        except ImportError:
+        except ImportError as _retry_err:
+            _retry_msg = str(_retry_err)
+            print(f"[BSAI_IndexTTS2.5] Import still failing after install: {_retry_msg}")
             raise ImportError(
-                "Failed to install indextts. Please run install.py or "
-                "install_bsai_indextts.bat manually, or execute: "
-                "pip install --ignore-requires-python "
-                "https://github.com/index-tts/index-tts/archive/refs/heads/main.zip"
+                f"Failed to import indextts after auto-install.\n"
+                f"  Original error: {_import_err_msg}\n"
+                f"  After install:  {_retry_msg}\n"
+                f"Please run install_bsai_indextts.bat manually, or execute:\n"
+                f"  pip install --no-deps --ignore-requires-python "
+                f"https://github.com/index-tts/index-tts/archive/refs/heads/main.zip"
             )
 
     tts = IndexTTS2(
