@@ -35,6 +35,34 @@ def run_pip_install(packages, use_official_pypi=False):
     return result.returncode == 0
 
 
+def run_indextts_patch():
+    """Apply the transformers compatibility patches to the installed indextts.
+
+    These patches make indextts 2.0.0 work on transformers >= 4.55 / 5.x
+    (removed symbols such as QuantizedCacheConfig, SequenceSummary,
+    forced_decoder_ids, TypicalLogitsWarper, and a wetext fallback).
+    The patch script is idempotent and safe to run repeatedly.
+    """
+    node_dir = os.path.dirname(os.path.abspath(__file__))
+    patch_script = os.path.join(node_dir, "patch_indextts.py")
+    if not os.path.exists(patch_script):
+        print("  WARNING: patch_indextts.py not found, skipping compatibility patch.")
+        return
+    print("  Running transformers compatibility patch (patch_indextts.py)...")
+    result = subprocess.run(
+        [sys.executable, patch_script],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        print(f"  WARNING: patch_indextts.py returned {result.returncode}")
+    for line in (result.stdout or "").strip().split("\n"):
+        if line.strip():
+            print(f"    {line}")
+    for line in (result.stderr or "").strip().split("\n"):
+        if line.strip():
+            print(f"    [stderr] {line}")
+
+
 def check_package_installed(package_name):
     """Check if a package is already installed."""
     try:
@@ -139,24 +167,24 @@ def main():
             import indextts
             indextts_dir = os.path.dirname(indextts.__file__)
             if os.path.exists(os.path.join(indextts_dir, "infer_v2_5.py")):
-                print("[1/6] indextts is already installed with infer_v2_5, skipping.")
+                print("[1/8] indextts is already installed with infer_v2_5, skipping.")
                 indextts_ok = True
             else:
-                print("[1/6] indextts installed but infer_v2_5.py missing — reinstalling...")
+                print("[1/8] indextts installed but infer_v2_5.py missing — reinstalling...")
                 # Uninstall old version
                 subprocess.run(
                     [sys.executable, "-m", "pip", "uninstall", "-y", "indextts"],
                     capture_output=True, text=True
                 )
         except Exception as e:
-            print(f"[1/6] indextts check failed: {e} — reinstalling...")
+            print(f"[1/8] indextts check failed: {e} — reinstalling...")
 
     if not indextts_ok:
-        print("[1/6] Installing hatchling build tool...")
+        print("[2/8] Installing hatchling build tool...")
         run_pip_install(["hatchling"])
 
         print()
-        print("[2/6] Installing indextts from GitHub source...")
+        print("[3/8] Installing indextts from GitHub source...")
         print("  (indextts is NOT on PyPI, installing from GitHub)")
 
         if not try_install_indextts():
@@ -173,22 +201,29 @@ def main():
             return False
 
     # ---------------------------------------------------------------
-    # Step 3: Install missing indextts dependencies
+    # Step 3.5: Apply transformers compatibility patches to indextts
+    # (idempotent & safe; handles transformers >= 4.55 / 5.x)
     # ---------------------------------------------------------------
     print()
-    print("[3/6] Installing indextts dependencies...")
+    print("[4/8] Applying transformers compatibility patches to indextts...")
+    run_indextts_patch()
+
+    # ---------------------------------------------------------------
+    # Step 5: Install missing indextts dependencies
+    # ---------------------------------------------------------------
+    print()
+    print("[5/8] Installing indextts dependencies...")
 
     missing_deps = []
     dep_check = {
         "cn2an": "cn2an",
-        "descript_audiotools": "descript-audiotools",
         "fugashi": "fugashi",
         "unidic_lite": "unidic-lite",
         "g2p_en": "g2p_en",
         "json5": "json5",
-        "keras": "keras",
         "munch": "munch",
         "textstat": "textstat",
+        "openai_whisper": "openai-whisper",
     }
     for import_name, pip_name in dep_check.items():
         if not check_package_installed(import_name):
@@ -200,11 +235,20 @@ def main():
     else:
         print("  All dependencies already installed.")
 
+    # wetext is also required, but it needs a C++ build toolchain (MSVC + CMake)
+    # to compile kaldifst on Windows/macOS. If it can't build, the compat patch
+    # makes indextts degrade gracefully, so we install it but ignore failures.
+    if not check_package_installed("wetext"):
+        print("  Installing wetext (may require C++ build tools; failures are non-fatal)...")
+        run_pip_install(["wetext"])
+    else:
+        print("  wetext already installed.")
+
     # ---------------------------------------------------------------
-    # Step 4: Fix protobuf version
+    # Step 6: Fix protobuf version
     # ---------------------------------------------------------------
     print()
-    print("[4/6] Checking protobuf version...")
+    print("[6/8] Checking protobuf version...")
     try:
         import google.protobuf
         proto_version = google.protobuf.__version__
@@ -222,7 +266,7 @@ def main():
     # Step 5: Install compatibility shim for transformers 5.x
     # ---------------------------------------------------------------
     print()
-    print("[5/6] Installing transformers 5.x compatibility shim...")
+    print("[7/8] Installing transformers 5.x compatibility shim...")
 
     try:
         import transformers
@@ -263,7 +307,7 @@ def main():
     # Step 6: Verify installation and register model directory
     # ---------------------------------------------------------------
     print()
-    print("[6/6] Verifying installation...")
+    print("[8/8] Verifying installation...")
 
     # Verify indextts can be imported
     if check_package_installed("indextts"):

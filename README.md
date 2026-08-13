@@ -29,7 +29,7 @@ IndexTTS-2.5 is a major upgrade over IndexTTS-2 with four key improvements:
 2. Search for "BSAI_ComfyUI_IndexTTS-2.5"
 3. Click Install
 
-The `install.py` script will automatically handle all dependencies, including installing `indextts` from GitHub source and applying the transformers 5.x compatibility shim.
+The `install.py` script will automatically handle everything: it installs `indextts` from GitHub source, applies the transformers **4.55+/5.x** compatibility patch (`patch_indextts.py`), installs runtime dependencies, and applies the transformers 5.x compatibility shim.
 
 ### Method 2: Manual
 
@@ -44,7 +44,7 @@ The `install.py` script will automatically handle all dependencies, including in
    # Windows (ComfyUI portable)
    .\python\python.exe BSAI_ComfyUI_IndexTTS-2.5/install.py
 
-   # Or use the batch file
+   # Or use the batch file (auto-detects python.exe location)
    BSAI_ComfyUI_IndexTTS-2.5\install_bsai_indextts.bat
    ```
 
@@ -58,17 +58,58 @@ If the automated installation fails, you can install manually:
 # 1. Install hatchling build tool (may not be on Chinese mirrors)
 pip install hatchling --index-url https://pypi.org/simple/
 
-# 2. Install indextts from GitHub (NOT on PyPI)
+# 2. Install indextts from GitHub (NOT on PyPI; indextts 2.0.0)
 pip install --no-deps --ignore-requires-python --no-build-isolation git+https://github.com/index-tts/index-tts.git
 
-# 3. Install missing dependencies (use --index-url if Chinese mirror is missing packages)
-pip install cn2an descript-audiotools fugashi unidic-lite g2p_en json5 keras munch textstat --index-url https://pypi.org/simple/
+# 3. Install runtime dependencies (openai-whisper is REQUIRED).
+#    NOTE: do NOT install keras / descript-audiotools — they are not used at
+#    runtime and keras==2.9.0 conflicts with Python 3.12+.
+pip install openai-whisper cn2an fugashi unidic-lite g2p_en json5 munch textstat --index-url https://pypi.org/simple/
 
-# 4. Fix protobuf version
+# 4. wetext is also required, but needs a C++ toolchain (MSVC + CMake) to build
+#    kaldifst on Windows/macOS. If it fails to build, that's OK — the patch below
+#    makes indextts degrade gracefully (numbers/dates won't be auto-converted).
+pip install wetext --index-url https://pypi.org/simple/
+
+# 5. Apply the transformers compatibility patch (REQUIRED for transformers >= 4.55)
+python BSAI_ComfyUI_IndexTTS-2.5/patch_indextts.py
+
+# 6. Fix protobuf version (optional, defensive)
 pip install "protobuf>=5.26.1,<6" --index-url https://pypi.org/simple/
 ```
 
-The transformers 5.x compatibility shim (`indextts_compat.py`) is applied automatically when ComfyUI loads the node.
+The transformers compatibility patch (`patch_indextts.py`) and the 5.x shim
+(`indextts_compat.py`) are applied automatically when ComfyUI loads the node.
+
+## Compatibility (what the patch fixes)
+
+`indextts` 2.0.0 (installed from `github.com/index-tts/index-tts`) was built for
+older transformers. Modern ComfyUI portable builds ship **transformers ≥ 4.55**
+(e.g. 4.57), where several internal symbols were removed. Without the patch you
+get an `ImportError` at load time or
+`AttributeError: 'GenerationConfig' object has no attribute 'forced_decoder_ids'`
+at synthesis time.
+
+`patch_indextts.py` makes indextts work on **transformers 4.55+ and 5.x** by
+wrapping the removed symbols in `try/except` fallbacks (or using `getattr`):
+
+| Symbol | Where | Fix |
+|--------|-------|-----|
+| `QuantizedCacheConfig` | `indextts/gpt/transformers_generation_utils.py` | try/except + dataclass placeholder |
+| `_crop_past_key_values` | `indextts/gpt/transformers_generation_utils.py` | try/except + compat function |
+| `NEED_SETUP_CACHE_CLASSES_MAPPING` / `QUANT_BACKEND_CLASSES_MAPPING` | `indextts/gpt/transformers_generation_utils.py` | try/except → `{}` |
+| `forced_decoder_ids` | `indextts/gpt/transformers_generation_utils.py` | `getattr(..., None)` |
+| `SequenceSummary` | `indextts/gpt/transformers_gpt2.py` | try/except placeholder |
+| `TypicalLogitsWarper` | `indextts/utils/typical_sampling.py` | import from `transformers.generation.logits_process` |
+| `wetext` import | `indextts/utils/front.py` | try/except graceful fallback (passthrough normalizer) |
+
+The patch is **idempotent and safe**: re-running it is a no-op if already applied,
+and it never fails the install if `indextts` changed upstream (it warns and skips).
+
+> **Note on `wetext`**: if your machine has no C++ build tools (MSVC + CMake),
+> `wetext` cannot compile. The patch degrades it to a pass-through normalizer —
+> everything still works, only numbers/dates won't be auto-converted to spoken
+> text. Install `wetext` separately if you want full normalization.
 
 ## Troubleshooting
 
@@ -88,13 +129,17 @@ set PATH=C:\Program Files\Git\cmd;%PATH%
 pip install --no-deps --ignore-requires-python --no-build-isolation git+https://github.com/index-tts/index-tts.git
 ```
 
-### Node fails to load with "cannot import name 'OffloadedCache' from 'transformers.cache_utils'"
+### Node fails to load with "cannot import name 'OffloadedCache' from 'transformers.cache_utils'" or "'GenerationConfig' object has no attribute 'forced_decoder_ids'"
 
-**Cause**: `indextts` was built for transformers 4.52.1, but your environment has transformers 5.x. Many internal APIs were removed or renamed in transformers 5.0.
+**Cause**: `indextts` 2.0.0 was written for older transformers. Starting with **transformers 4.55** (and 5.x) many internal APIs were removed: `QuantizedCacheConfig`, `SequenceSummary`, `forced_decoder_ids`, `TypicalLogitsWarper`, etc.
 
-**Fix**: The compatibility shim (`indextts_compat.py`) handles this automatically. If you still see this error:
-1. Ensure `indextts_compat.py` exists in the node directory
-2. Restart ComfyUI (the shim is applied on node load)
+**Fix**: The compatibility patch (`patch_indextts.py`) handles this automatically — it is run by `install.py` / the batch file, and can also be run manually:
+```bash
+python BSAI_ComfyUI_IndexTTS-2.5/patch_indextts.py
+```
+If you still see the error:
+1. Ensure `patch_indextts.py` and `indextts_compat.py` exist in the node directory
+2. Restart ComfyUI (patches are applied on node load / install)
 3. Or manually run: `python install.py`
 
 ### "hatchling" build dependency not found
