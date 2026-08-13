@@ -95,13 +95,22 @@ def main():
         print(f"  Running: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True, env=env)
         if result.returncode != 0:
-            print(f"  ERROR: Failed to install indextts from GitHub")
+            print(f"  git install failed, trying zip archive (no git required)...")
+            cmd = [
+                sys.executable, "-m", "pip", "install",
+                "--no-deps",
+                "--ignore-requires-python",
+                "https://github.com/index-tts/index-tts/archive/refs/heads/main.zip"
+            ]
+            print(f"  Running: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        if result.returncode != 0:
+            print(f"  ERROR: Failed to install indextts")
             print(f"  stderr: {result.stderr[-500:] if result.stderr else 'N/A'}")
             print()
             print("  Try manual installation:")
-            print("    1. Ensure git is installed and in PATH")
-            print("    2. Run: pip install --no-deps --ignore-requires-python --no-build-isolation git+https://github.com/index-tts/index-tts.git")
-            print("    3. Or run install_bsai_indextts.bat")
+            print("    1. pip install --no-deps --ignore-requires-python https://github.com/index-tts/index-tts/archive/refs/heads/main.zip")
+            print("    2. Or run install_bsai_indextts.bat")
             return False
 
         print("  OK")

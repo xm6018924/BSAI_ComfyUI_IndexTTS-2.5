@@ -28,9 +28,13 @@ echo [3/5] 从 GitHub 安装 indextts (跳过依赖和版本检查)...
 set "PATH=%GIT_PATH%;%PATH%"
 "%PYTHON%" -m pip install --no-deps --ignore-requires-python --no-build-isolation "git+https://github.com/index-tts/index-tts.git"
 if errorlevel 1 (
-    echo 错误: indextts 安装失败
-    pause
-    exit /b 1
+    echo git 安装失败，尝试使用 zip 包安装 (无需 git)...
+    "%PYTHON%" -m pip install --no-deps --ignore-requires-python "https://github.com/index-tts/index-tts/archive/refs/heads/main.zip"
+    if errorlevel 1 (
+        echo 错误: indextts 安装失败
+        pause
+        exit /b 1
+    )
 )
 echo.
 

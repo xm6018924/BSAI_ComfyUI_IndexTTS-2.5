@@ -101,13 +101,33 @@ def _get_indextts(use_bf16=True, device=None):
     try:
         from indextts.infer_v2_5 import IndexTTS2
     except ImportError:
-        print("[BSAI_IndexTTS2.5] indextts package not found, installing...")
+        print("[BSAI_IndexTTS2.5] indextts not found, running install.py...")
         import subprocess
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-q", "indextts"],
-            check=False,
-        )
-        from indextts.infer_v2_5 import IndexTTS2
+        node_dir = os.path.dirname(os.path.abspath(__file__))
+        install_script = os.path.join(node_dir, "install.py")
+        if os.path.exists(install_script):
+            subprocess.run(
+                [sys.executable, install_script],
+                cwd=node_dir,
+                check=False,
+            )
+        else:
+            # Last resort: install from GitHub zip (no git required)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-q",
+                 "--ignore-requires-python",
+                 "https://github.com/index-tts/index-tts/archive/refs/heads/main.zip"],
+                check=False,
+            )
+        try:
+            from indextts.infer_v2_5 import IndexTTS2
+        except ImportError:
+            raise ImportError(
+                "Failed to install indextts. Please run install.py or "
+                "install_bsai_indextts.bat manually, or execute: "
+                "pip install --ignore-requires-python "
+                "https://github.com/index-tts/index-tts/archive/refs/heads/main.zip"
+            )
 
     tts = IndexTTS2(
         cfg_path=cfg_path,
