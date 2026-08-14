@@ -818,6 +818,7 @@ class BSAI_IndexTTS2_5LoadAudio:
     """
     Load an audio file from ComfyUI's input directory.
     Self-contained — does not depend on ComfyUI built-in audio nodes.
+    Supports file upload via ComfyUI's standard upload widget.
     """
 
     @classmethod
@@ -827,7 +828,7 @@ class BSAI_IndexTTS2_5LoadAudio:
             ('.wav', '.mp3', '.flac', '.ogg', '.m4a'))] if os.path.isdir(input_dir) else []
         return {
             "required": {
-                "audio_file": (sorted(files) if files else ["__upload__"], ),
+                "audio": (sorted(files) if files else ["upload_your_audio_file.wav"], ),
             },
         }
 
@@ -835,18 +836,39 @@ class BSAI_IndexTTS2_5LoadAudio:
     RETURN_NAMES = ("audio",)
     FUNCTION = "load_audio"
     CATEGORY = "BSAI"
+    OUTPUT_NODE = True
 
-    def load_audio(self, audio_file):
-        if audio_file == "__upload__" or not audio_file:
-            raise ValueError("Please upload an audio file or select one from the dropdown.")
+    @classmethod
+    def VALIDATE_INPUTS(cls, audio):
+        if not audio or audio.startswith("upload_"):
+            return "Please upload or select an audio file."
+        if not folder_paths.exists_annotated_filepath(audio):
+            return f"Audio file not found: {audio}"
+        return True
 
-        audio_path = folder_paths.get_annotated_filepath(audio_file)
+    @classmethod
+    def IS_CHANGED(cls, audio):
+        try:
+            import hashlib
+            audio_path = folder_paths.get_annotated_filepath(audio)
+            m = hashlib.sha256()
+            with open(audio_path, 'rb') as f:
+                m.update(f.read())
+            return m.digest().hex()
+        except Exception:
+            return ""
+
+    def load_audio(self, audio):
+        if not audio or audio.startswith("upload_"):
+            raise ValueError("Please upload an audio file using the upload button, or select one from the dropdown.")
+
+        audio_path = folder_paths.get_annotated_filepath(audio)
         if not os.path.isfile(audio_path):
             # Try input directory directly
             input_dir = folder_paths.get_input_directory()
-            audio_path = os.path.join(input_dir, audio_file)
+            audio_path = os.path.join(input_dir, audio)
             if not os.path.isfile(audio_path):
-                raise FileNotFoundError(f"Audio file not found: {audio_file}")
+                raise FileNotFoundError(f"Audio file not found: {audio}")
 
         print(f"[BSAI_IndexTTS2.5] Loading audio: {audio_path}")
 
