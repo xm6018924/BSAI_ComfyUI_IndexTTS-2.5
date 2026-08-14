@@ -5,141 +5,327 @@
     {
       "id": 1,
       "type": "BSAI_IndexTTS2.5Loader",
-      "pos": [0, 0],
-      "size": [320, 120],
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        320,
+        120
+      ],
       "flags": {},
       "order": 0,
       "mode": 0,
-      "widgets_values": [true, "auto", false, false],
+      "widgets_values": [
+        true,
+        "auto",
+        false,
+        false
+      ],
       "color": "#16727c",
       "bgcolor": "#4F0074"
     },
     {
       "id": 2,
-      "type": "LoadAudio",
-      "pos": [0, 200],
-      "size": [320, 80],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "widgets_values": ["chinese_voice.wav", "audio"],
-      "title": "Chinese Speaker Voice",
-      "color": "#226",
-      "bgcolor": "#336"
-    },
-    {
-      "id": 3,
-      "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 0],
-      "size": [400, 550],
+      "type": "BSAI_IndexTTS2.5LoadAudio",
+      "pos": [
+        0,
+        200
+      ],
+      "size": [
+        320,
+        80
+      ],
       "flags": {},
       "order": 2,
       "mode": 0,
       "widgets_values": [
-        "Hello everyone, this is a cross-language demonstration. I am speaking English with a Chinese speaker's voice.",
-        "EN",
-        1.0, false, "", false, 1.0,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
+        "chinese_voice.wav"
       ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 1},
-        {"name": "reference_audio", "type": "AUDIO", "link": 2}
-      ],
-      "title": "Cross-lang: ZH voice -> EN text",
-      "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "color": "#226",
+      "bgcolor": "#336",
+      "title": "Chinese Speaker Voice"
     },
     {
-      "id": 6,
+      "id": 3,
       "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 400],
-      "size": [400, 550],
+      "pos": [
+        400,
+        0
+      ],
+      "size": [
+        400,
+        550
+      ],
       "flags": {},
       "order": 3,
       "mode": 0,
       "widgets_values": [
-        "\u307f\u306a\u3055\u3093\u3053\u3093\u306b\u3061\u306f\u3001\u3053\u308c\u306f\u30af\u30ed\u30b9\u8a00\u8a9e\u5408\u6210\u306e\u30c7\u30e2\u30f3\u30b9\u30c8\u30ec\u30fc\u30b7\u30e7\u30f3\u3067\u3059\u3002\u4e2d\u56fd\u8a9e\u306e\u58f0\u3067\u65e5\u672c\u8a9e\u3092\u8a71\u3057\u3066\u3044\u307e\u3059\u3002",
-        "JA",
-        1.0, false, "", false, 1.0,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
+        "Hello everyone, this is a cross-language demonstration. I am speaking English with a Chinese speaker's voice.",
+        "EN",
+        1.0,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
       ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 3},
-        {"name": "reference_audio", "type": "AUDIO", "link": 4}
-      ],
-      "title": "Cross-lang: ZH voice -> JA text",
       "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "bgcolor": "#4F0074",
+      "title": "ZH voice -> EN text",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 2
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "BSAI_IndexTTS2.5Synthesis",
+      "pos": [
+        400,
+        400
+      ],
+      "size": [
+        400,
+        550
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "widgets_values": [
+        "みなさんこんにちは、これはクロス言語合成のデモンストレーションです。中国語の声で日本語を話しています。",
+        "JA",
+        1.0,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
+      ],
+      "color": "#16727c",
+      "bgcolor": "#4F0074",
+      "title": "ZH voice -> JA text",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 3
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 4
+        }
+      ]
     },
     {
       "id": 7,
       "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 800],
-      "size": [400, 550],
+      "pos": [
+        400,
+        800
+      ],
+      "size": [
+        400,
+        550
+      ],
       "flags": {},
-      "order": 4,
+      "order": 7,
       "mode": 0,
       "widgets_values": [
         "Hola a todos, esta es una demostracion de sintesis multilingue. Estoy hablando en espanol con una voz china.",
         "ES",
-        1.0, false, "", false, 1.0,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
+        1.0,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
       ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 5},
-        {"name": "reference_audio", "type": "AUDIO", "link": 6}
-      ],
-      "title": "Cross-lang: ZH voice -> ES text",
       "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "bgcolor": "#4F0074",
+      "title": "ZH voice -> ES text",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 5
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 6
+        }
+      ]
     },
     {
       "id": 4,
       "type": "BSAI_IndexTTS2.5SaveAudio",
-      "pos": [850, 0],
-      "size": [320, 130],
+      "pos": [
+        850,
+        0
+      ],
+      "size": [
+        320,
+        130
+      ],
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5_crosslang_en", "wav", 192, 1.0],
-      "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 7}
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_crosslang_en",
+        "wav",
+        192,
+        1.0
       ],
       "color": "#233",
-      "bgcolor": "#355"
+      "bgcolor": "#355",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 7
+        }
+      ]
     },
     {
       "id": 8,
       "type": "BSAI_IndexTTS2.5SaveAudio",
-      "pos": [850, 200],
-      "size": [320, 130],
+      "pos": [
+        850,
+        200
+      ],
+      "size": [
+        320,
+        130
+      ],
       "flags": {},
-      "order": 6,
+      "order": 8,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5_crosslang_ja", "wav", 192, 1.0],
-      "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 8}
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_crosslang_ja",
+        "wav",
+        192,
+        1.0
       ],
       "color": "#233",
-      "bgcolor": "#355"
+      "bgcolor": "#355",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 8
+        }
+      ]
     }
   ],
   "links": [
-    [1, 1, 0, 3, 0, "INDEX_TTS_MODEL"],
-    [2, 2, 0, 3, 2, "AUDIO"],
-    [3, 1, 0, 6, 0, "INDEX_TTS_MODEL"],
-    [4, 2, 0, 6, 2, "AUDIO"],
-    [5, 1, 0, 7, 0, "INDEX_TTS_MODEL"],
-    [6, 2, 0, 7, 2, "AUDIO"],
-    [7, 3, 0, 4, 0, "AUDIO"],
-    [8, 6, 0, 8, 0, "AUDIO"]
+    [
+      1,
+      1,
+      0,
+      3,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      2,
+      "AUDIO"
+    ],
+    [
+      3,
+      1,
+      0,
+      6,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      4,
+      2,
+      0,
+      6,
+      2,
+      "AUDIO"
+    ],
+    [
+      5,
+      1,
+      0,
+      7,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      6,
+      2,
+      0,
+      7,
+      2,
+      "AUDIO"
+    ],
+    [
+      7,
+      3,
+      0,
+      4,
+      0,
+      "AUDIO"
+    ],
+    [
+      8,
+      6,
+      0,
+      8,
+      0,
+      "AUDIO"
+    ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "info": {
       "name": "06 - Cross-Language Synthesis",
-      "description": "Cross-language synthesis: Chinese speaker voice -> English, Japanese, Spanish text. Supports ZH, EN, JA, ES, AR."
+      "description": "Cross-language: Chinese speaker voice -> EN, JA, ES. Supports ZH/EN/JA/ES/AR"
     }
   },
   "version": 0.4

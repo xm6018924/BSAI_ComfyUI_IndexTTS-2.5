@@ -3,11 +3,12 @@ BSAI_ComfyUI_IndexTTS-2.5
 ComfyUI custom nodes for IndexTTS-2.5 voice cloning and emotion-controllable TTS.
 
 Nodes:
-  - BSAI IndexTTS2.5 Loader:        Load model with auto-download (supports use_qwen_emo)
-  - BSAI IndexTTS2.5 Synthesis:     Text-to-speech with emotion control, speed control, cross-language
+  - BSAI IndexTTS2.5 Load Audio:     Load audio files (self-contained, no external deps)
+  - BSAI IndexTTS2.5 Loader:         Load model with auto-download (supports use_qwen_emo)
+  - BSAI IndexTTS2.5 Synthesis:      Text-to-speech with emotion control, speed control, cross-language
   - BSAI IndexTTS2.5 Emotion Vector: Construct 8D emotion vector [happy, angry, sad, fear, disgust, melancholy, surprise, calm]
-  - BSAI IndexTTS2.5 Save Audio:    Save generated audio
-  - BSAI IndexTTS2.5 Unload Model:  Free VRAM
+  - BSAI IndexTTS2.5 Save Audio:     Save generated audio (outputs file_path + audio passthrough)
+  - BSAI IndexTTS2.5 Unload Model:   Free VRAM
 
 Author: BSAI Team
 License: MIT

@@ -94,6 +94,20 @@ The transformers compatibility patch (`patch_indextts.py`) and the 5.x shim
 
 ## Nodes
 
+### 0. BSAI IndexTTS2.5 Load Audio
+
+Load an audio file from ComfyUI's input directory. Self-contained — does not depend on ComfyUI built-in audio nodes.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| audio_file | COMBO | - | Select audio file from input directory (supports wav, mp3, flac, ogg, m4a) |
+
+**Output**: `AUDIO` - Audio data for use with Synthesis node
+
+> **Tip**: Upload audio files to ComfyUI's `input/` directory, or use the file upload widget in the node.
+
+---
+
 ### 1. BSAI IndexTTS2.5 Loader
 
 Loads the IndexTTS-2.5 model. On first run, automatically downloads the model.
@@ -204,6 +218,8 @@ Save generated audio to disk.
 | format | COMBO | wav | Audio format: wav, mp3, flac |
 | mp3_bitrate | INT | 192 | MP3 bitrate (kbps) |
 | output_gain | FLOAT | 1.0 | Output volume multiplier |
+
+**Outputs**: `file_path` (STRING) + `audio` (AUDIO — pass-through for chaining)
 
 ---
 

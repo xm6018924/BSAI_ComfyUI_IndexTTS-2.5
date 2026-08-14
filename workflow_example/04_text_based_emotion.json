@@ -1,94 +1,163 @@
 {
-  "last_node_id": 5,
-  "last_link_id": 4,
+  "last_node_id": 4,
+  "last_link_id": 3,
   "nodes": [
     {
       "id": 1,
       "type": "BSAI_IndexTTS2.5Loader",
-      "pos": [0, 0],
-      "size": [320, 120],
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        320,
+        120
+      ],
       "flags": {},
       "order": 0,
       "mode": 0,
-      "widgets_values": [true, "auto", true, false],
+      "widgets_values": [
+        true,
+        "auto",
+        true,
+        false
+      ],
       "color": "#16727c",
       "bgcolor": "#4F0074"
     },
     {
       "id": 2,
-      "type": "LoadAudio",
-      "pos": [0, 200],
-      "size": [320, 80],
+      "type": "BSAI_IndexTTS2.5LoadAudio",
+      "pos": [
+        0,
+        200
+      ],
+      "size": [
+        320,
+        80
+      ],
       "flags": {},
-      "order": 1,
+      "order": 2,
       "mode": 0,
-      "widgets_values": ["reference.wav", "audio"],
+      "widgets_values": [
+        "reference.wav"
+      ],
       "color": "#226",
-      "bgcolor": "#336"
+      "bgcolor": "#336",
+      "title": "Speaker Voice"
     },
     {
       "id": 3,
       "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 50],
-      "size": [400, 550],
+      "pos": [
+        400,
+        50
+      ],
+      "size": [
+        400,
+        550
+      ],
       "flags": {},
       "order": 3,
       "mode": 0,
       "widgets_values": [
-        "\u5feb\u8eb2\u8d77\u6765\uff01\u662f\u4ed6\u8981\u6765\u4e86\uff01\u4ed6\u8981\u6765\u6293\u6211\u4eec\u4e86\uff01",
+        "快躲起来！是他要来了！他要来抓我们了！",
         "ZH",
-        0.6, true, "\u4f60\u5413\u6b7b\u6211\u4e86\uff01\u4f60\u662f\u9b3c\u5417\uff1f", false, 1.0,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
+        0.6,
+        true,
+        "你吓死我了！你是鬼吗？",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
       ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 1},
-        {"name": "reference_audio", "type": "AUDIO", "link": 2}
-      ],
-      "title": "Text-Based Emotion Synthesis",
       "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "bgcolor": "#4F0074",
+      "title": "Text-Based Emotion Synthesis",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 2
+        }
+      ]
     },
     {
       "id": 4,
       "type": "BSAI_IndexTTS2.5SaveAudio",
-      "pos": [850, 50],
-      "size": [320, 130],
+      "pos": [
+        850,
+        50
+      ],
+      "size": [
+        320,
+        130
+      ],
       "flags": {},
       "order": 4,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5_emo_text", "wav", 192, 1.0],
-      "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 3}
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_emo_text",
+        "wav",
+        192,
+        1.0
       ],
       "color": "#233",
-      "bgcolor": "#355"
-    },
-    {
-      "id": 5,
-      "type": "PreviewAudio",
-      "pos": [850, 250],
-      "size": [320, 80],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "widgets_values": [],
+      "bgcolor": "#355",
       "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 4}
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 3
+        }
       ]
     }
   ],
   "links": [
-    [1, 1, 0, 3, 0, "INDEX_TTS_MODEL"],
-    [2, 2, 0, 3, 2, "AUDIO"],
-    [3, 3, 0, 4, 0, "AUDIO"],
-    [4, 3, 0, 5, 0, "AUDIO"]
+    [
+      1,
+      1,
+      0,
+      3,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      2,
+      "AUDIO"
+    ],
+    [
+      3,
+      3,
+      0,
+      4,
+      0,
+      "AUDIO"
+    ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "info": {
       "name": "04 - Text-Based Emotion",
-      "description": "Text-based emotion: use_emo_text=True, emo_text='You scared me! Are you a ghost?', emo_alpha=0.6. Emotion is auto-generated from the description text via Qwen3 model."
+      "description": "Qwen3 text-based emotion: use_emo_text=True, emo_text='You scared me!', emo_alpha=0.6"
     }
   },
   "version": 0.4

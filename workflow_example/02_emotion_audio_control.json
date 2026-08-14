@@ -1,109 +1,196 @@
 {
-  "last_node_id": 7,
-  "last_link_id": 7,
+  "last_node_id": 6,
+  "last_link_id": 5,
   "nodes": [
     {
       "id": 1,
       "type": "BSAI_IndexTTS2.5Loader",
-      "pos": [0, 0],
-      "size": [320, 120],
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        320,
+        120
+      ],
       "flags": {},
       "order": 0,
       "mode": 0,
-      "widgets_values": [true, "auto", false, false],
+      "widgets_values": [
+        true,
+        "auto",
+        false,
+        false
+      ],
       "color": "#16727c",
       "bgcolor": "#4F0074"
     },
     {
       "id": 2,
-      "type": "LoadAudio",
-      "pos": [0, 200],
-      "size": [320, 80],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "widgets_values": ["voice_reference.wav", "audio"],
-      "title": "Speaker Voice Reference",
-      "color": "#226",
-      "bgcolor": "#336"
-    },
-    {
-      "id": 6,
-      "type": "LoadAudio",
-      "pos": [0, 350],
-      "size": [320, 80],
+      "type": "BSAI_IndexTTS2.5LoadAudio",
+      "pos": [
+        0,
+        200
+      ],
+      "size": [
+        320,
+        80
+      ],
       "flags": {},
       "order": 2,
       "mode": 0,
-      "widgets_values": ["emotion_sad.wav", "audio"],
-      "title": "Emotion Reference Audio",
+      "widgets_values": [
+        "voice_reference.wav"
+      ],
+      "color": "#226",
+      "bgcolor": "#336",
+      "title": "Speaker Voice"
+    },
+    {
+      "id": 6,
+      "type": "BSAI_IndexTTS2.5LoadAudio",
+      "pos": [
+        0,
+        350
+      ],
+      "size": [
+        320,
+        80
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "widgets_values": [
+        "emotion_sad.wav"
+      ],
       "color": "#633",
-      "bgcolor": "#844"
+      "bgcolor": "#844",
+      "title": "Emotion Reference"
     },
     {
       "id": 3,
       "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 50],
-      "size": [400, 550],
+      "pos": [
+        400,
+        50
+      ],
+      "size": [
+        400,
+        550
+      ],
       "flags": {},
       "order": 3,
       "mode": 0,
       "widgets_values": [
-        "\u9152\u697c\u4e27\u5c3d\u5929\u826f\uff0c\u5f00\u59cb\u501f\u673a\u7ade\u62cd\u623f\u95f4\uff0c\u54ce\uff0c\u4e00\u7fa4\u8822\u8d27\u3002",
+        "酒楼丧尽天良，开始借机竞拍房间。哎，一群蠢货。",
         "ZH",
-        0.9, false, "", false, 1.0,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
-      ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 1},
-        {"name": "reference_audio", "type": "AUDIO", "link": 2},
-        {"name": "emo_audio_prompt", "type": "AUDIO", "link": 5}
+        0.9,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
       ],
       "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "bgcolor": "#4F0074",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 2
+        },
+        {
+          "name": "emo_audio_prompt",
+          "type": "AUDIO",
+          "link": 5
+        }
+      ]
     },
     {
       "id": 4,
       "type": "BSAI_IndexTTS2.5SaveAudio",
-      "pos": [850, 50],
-      "size": [320, 130],
+      "pos": [
+        850,
+        50
+      ],
+      "size": [
+        320,
+        130
+      ],
       "flags": {},
       "order": 4,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5_emo_audio", "wav", 192, 1.0],
-      "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 3}
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_emo_audio",
+        "wav",
+        192,
+        1.0
       ],
       "color": "#233",
-      "bgcolor": "#355"
-    },
-    {
-      "id": 5,
-      "type": "PreviewAudio",
-      "pos": [850, 250],
-      "size": [320, 80],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "widgets_values": [],
+      "bgcolor": "#355",
       "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 4}
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 3
+        }
       ]
     }
   ],
   "links": [
-    [1, 1, 0, 3, 0, "INDEX_TTS_MODEL"],
-    [2, 2, 0, 3, 2, "AUDIO"],
-    [3, 3, 0, 4, 0, "AUDIO"],
-    [4, 3, 0, 5, 0, "AUDIO"],
-    [5, 6, 0, 3, 3, "AUDIO"]
+    [
+      1,
+      1,
+      0,
+      3,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      2,
+      "AUDIO"
+    ],
+    [
+      3,
+      3,
+      0,
+      4,
+      0,
+      "AUDIO"
+    ],
+    [
+      5,
+      6,
+      0,
+      3,
+      3,
+      "AUDIO"
+    ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "info": {
       "name": "02 - Emotion Audio Control",
-      "description": "Voice-emotion decoupling: speaker voice + separate emotion reference audio (emo_alpha=0.9)"
+      "description": "Voice-emotion decoupling: speaker voice + separate emotion audio (emo_alpha=0.9)"
     }
   },
   "version": 0.4

@@ -812,6 +812,71 @@ def _load_audio_file(audio_path, target_sr=24000):
 
 
 # ===========================================================================
+#  Node 0: BSAI_IndexTTS2.5LoadAudio (self-contained audio loader)
+# ===========================================================================
+class BSAI_IndexTTS2_5LoadAudio:
+    """
+    Load an audio file from ComfyUI's input directory.
+    Self-contained — does not depend on ComfyUI built-in audio nodes.
+    """
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        input_dir = folder_paths.get_input_directory()
+        files = [f for f in os.listdir(input_dir) if f.lower().endswith(
+            ('.wav', '.mp3', '.flac', '.ogg', '.m4a'))] if os.path.isdir(input_dir) else []
+        return {
+            "required": {
+                "audio_file": (sorted(files) if files else ["__upload__"], ),
+            },
+        }
+
+    RETURN_TYPES = ("AUDIO",)
+    RETURN_NAMES = ("audio",)
+    FUNCTION = "load_audio"
+    CATEGORY = "BSAI"
+
+    def load_audio(self, audio_file):
+        if audio_file == "__upload__" or not audio_file:
+            raise ValueError("Please upload an audio file or select one from the dropdown.")
+
+        audio_path = folder_paths.get_annotated_filepath(audio_file)
+        if not os.path.isfile(audio_path):
+            # Try input directory directly
+            input_dir = folder_paths.get_input_directory()
+            audio_path = os.path.join(input_dir, audio_file)
+            if not os.path.isfile(audio_path):
+                raise FileNotFoundError(f"Audio file not found: {audio_file}")
+
+        print(f"[BSAI_IndexTTS2.5] Loading audio: {audio_path}")
+
+        # Load audio (torchaudio first, soundfile fallback)
+        try:
+            waveform, sample_rate = torchaudio.load(audio_path)
+        except (ImportError, RuntimeError):
+            import soundfile as sf
+            data, sr = sf.read(audio_path)
+            waveform = torch.from_numpy(data).float()
+            if waveform.dim() == 1:
+                waveform = waveform.unsqueeze(0)
+            else:
+                waveform = waveform.T
+            sample_rate = sr
+
+        # Convert to mono if needed
+        if waveform.shape[0] > 1:
+            waveform = waveform.mean(dim=0, keepdim=True)
+
+        # ComfyUI AUDIO format: {"waveform": tensor[batch, channels, samples], "sample_rate": int}
+        audio_dict = {
+            "waveform": waveform.unsqueeze(0),  # Add batch dim: [1, channels, samples]
+            "sample_rate": sample_rate,
+        }
+        print(f"[BSAI_IndexTTS2.5] Audio loaded: sr={sample_rate}, duration={waveform.shape[-1]/sample_rate:.2f}s")
+        return (audio_dict,)
+
+
+# ===========================================================================
 #  Node 1: BSAI_IndexTTS2.5Loader
 # ===========================================================================
 class BSAI_IndexTTS2_5Loader:
@@ -1100,8 +1165,6 @@ class BSAI_IndexTTS2_5EmotionVector:
                 "melancholy": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
                 "surprise": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
                 "calm": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-            },
-            "optional": {
                 "preset": (["none", "happy", "angry", "sad", "fear", "disgust",
                             "melancholy", "surprise", "calm"], {"default": "none"}),
             },
@@ -1157,8 +1220,8 @@ class BSAI_IndexTTS2_5SaveAudio:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("file_path")
+    RETURN_TYPES = ("STRING", "AUDIO",)
+    RETURN_NAMES = ("file_path", "audio",)
     FUNCTION = "save_audio"
     CATEGORY = "BSAI"
     OUTPUT_NODE = True
@@ -1200,7 +1263,7 @@ class BSAI_IndexTTS2_5SaveAudio:
                 filepath = result
 
         print(f"[BSAI_IndexTTS2.5] Audio saved: {filepath}")
-        return (filepath,)
+        return (filepath, {"waveform": waveform, "sample_rate": sample_rate},)
 
 
 # ===========================================================================
@@ -1232,6 +1295,7 @@ class BSAI_IndexTTS2_5UnloadModel:
 #  Node Mappings
 # ===========================================================================
 NODE_CLASS_MAPPINGS = {
+    "BSAI_IndexTTS2.5LoadAudio": BSAI_IndexTTS2_5LoadAudio,
     "BSAI_IndexTTS2.5Loader": BSAI_IndexTTS2_5Loader,
     "BSAI_IndexTTS2.5Synthesis": BSAI_IndexTTS2_5Synthesis,
     "BSAI_IndexTTS2.5EmotionVector": BSAI_IndexTTS2_5EmotionVector,
@@ -1240,6 +1304,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "BSAI_IndexTTS2.5LoadAudio": "BSAI IndexTTS2.5 Load Audio",
     "BSAI_IndexTTS2.5Loader": "BSAI IndexTTS2.5 Loader",
     "BSAI_IndexTTS2.5Synthesis": "BSAI IndexTTS2.5 Synthesis",
     "BSAI_IndexTTS2.5EmotionVector": "BSAI IndexTTS2.5 Emotion Vector",

@@ -5,140 +5,327 @@
     {
       "id": 1,
       "type": "BSAI_IndexTTS2.5Loader",
-      "pos": [0, 0],
-      "size": [320, 120],
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        320,
+        120
+      ],
       "flags": {},
       "order": 0,
       "mode": 0,
-      "widgets_values": [true, "auto", false, false],
+      "widgets_values": [
+        true,
+        "auto",
+        false,
+        false
+      ],
       "color": "#16727c",
       "bgcolor": "#4F0074"
     },
     {
       "id": 2,
-      "type": "LoadAudio",
-      "pos": [0, 200],
-      "size": [320, 80],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "widgets_values": ["reference.wav", "audio"],
-      "color": "#226",
-      "bgcolor": "#336"
-    },
-    {
-      "id": 3,
-      "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 0],
-      "size": [400, 550],
+      "type": "BSAI_IndexTTS2.5LoadAudio",
+      "pos": [
+        0,
+        200
+      ],
+      "size": [
+        320,
+        80
+      ],
       "flags": {},
       "order": 2,
       "mode": 0,
       "widgets_values": [
-        "\u5927\u5bb6\u597d\uff0c\u6b22\u8fce\u6765\u5230IndexTTS\u7684\u8bed\u901f\u63a7\u5236\u6f14\u793a\u3002\u8fd9\u662f\u6b63\u5e38\u8bed\u901f\u7684\u5408\u6210\u8bed\u97f3\u3002",
-        "ZH",
-        1.0, false, "", false, 1.0,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
+        "reference.wav"
       ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 1},
-        {"name": "reference_audio", "type": "AUDIO", "link": 2}
-      ],
-      "title": "Normal Speed (1.0x)",
-      "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "color": "#226",
+      "bgcolor": "#336",
+      "title": "Speaker Voice"
     },
     {
-      "id": 6,
+      "id": 3,
       "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 400],
-      "size": [400, 550],
+      "pos": [
+        400,
+        0
+      ],
+      "size": [
+        400,
+        550
+      ],
       "flags": {},
       "order": 3,
       "mode": 0,
       "widgets_values": [
-        "\u5927\u5bb6\u597d\uff0c\u6b22\u8fce\u6765\u5230IndexTTS\u7684\u8bed\u901f\u63a7\u5236\u6f14\u793a\u3002\u8fd9\u662f\u52a0\u5feb\u8bed\u901f\u7684\u5408\u6210\u8bed\u97f3\u3002",
+        "大家好，欢迎来到IndexTTS的语速控制演示。这是正常语速的合成语音。",
         "ZH",
-        1.0, false, "", false, 0.7,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
+        1.0,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
       ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 3},
-        {"name": "reference_audio", "type": "AUDIO", "link": 4}
-      ],
-      "title": "Fast Speed (0.7x duration)",
       "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "bgcolor": "#4F0074",
+      "title": "Normal Speed (1.0x)",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 2
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "BSAI_IndexTTS2.5Synthesis",
+      "pos": [
+        400,
+        400
+      ],
+      "size": [
+        400,
+        550
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "widgets_values": [
+        "大家好，欢迎来到IndexTTS的语速控制演示。这是加快语速的合成语音。",
+        "ZH",
+        1.0,
+        false,
+        "",
+        false,
+        0.7,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
+      ],
+      "color": "#16727c",
+      "bgcolor": "#4F0074",
+      "title": "Fast Speed (0.7x)",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 3
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 4
+        }
+      ]
     },
     {
       "id": 7,
       "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 800],
-      "size": [400, 550],
+      "pos": [
+        400,
+        800
+      ],
+      "size": [
+        400,
+        550
+      ],
       "flags": {},
-      "order": 4,
+      "order": 7,
       "mode": 0,
       "widgets_values": [
-        "\u5927\u5bb6\u597d\uff0c\u6b22\u8fce\u6765\u5230IndexTTS\u7684\u8bed\u901f\u63a7\u5236\u6f14\u793a\u3002\u8fd9\u662f\u653e\u6162\u8bed\u901f\u7684\u5408\u6210\u8bed\u97f3\u3002",
+        "大家好，欢迎来到IndexTTS的语速控制演示。这是放慢语速的合成语音。",
         "ZH",
-        1.0, false, "", false, 1.4,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
+        1.0,
+        false,
+        "",
+        false,
+        1.4,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
       ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 5},
-        {"name": "reference_audio", "type": "AUDIO", "link": 6}
-      ],
-      "title": "Slow Speed (1.4x duration)",
       "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "bgcolor": "#4F0074",
+      "title": "Slow Speed (1.4x)",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 5
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 6
+        }
+      ]
     },
     {
       "id": 4,
       "type": "BSAI_IndexTTS2.5SaveAudio",
-      "pos": [850, 0],
-      "size": [320, 130],
+      "pos": [
+        850,
+        0
+      ],
+      "size": [
+        320,
+        130
+      ],
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5_speed_normal", "wav", 192, 1.0],
-      "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 7}
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_speed_normal",
+        "wav",
+        192,
+        1.0
       ],
       "color": "#233",
-      "bgcolor": "#355"
+      "bgcolor": "#355",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 7
+        }
+      ]
     },
     {
       "id": 8,
       "type": "BSAI_IndexTTS2.5SaveAudio",
-      "pos": [850, 200],
-      "size": [320, 130],
+      "pos": [
+        850,
+        200
+      ],
+      "size": [
+        320,
+        130
+      ],
       "flags": {},
-      "order": 6,
+      "order": 8,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5_speed_fast", "wav", 192, 1.0],
-      "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 8}
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_speed_fast",
+        "wav",
+        192,
+        1.0
       ],
       "color": "#233",
-      "bgcolor": "#355"
+      "bgcolor": "#355",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 8
+        }
+      ]
     }
   ],
   "links": [
-    [1, 1, 0, 3, 0, "INDEX_TTS_MODEL"],
-    [2, 2, 0, 3, 2, "AUDIO"],
-    [3, 1, 0, 6, 0, "INDEX_TTS_MODEL"],
-    [4, 2, 0, 6, 2, "AUDIO"],
-    [5, 1, 0, 7, 0, "INDEX_TTS_MODEL"],
-    [6, 2, 0, 7, 2, "AUDIO"],
-    [7, 3, 0, 4, 0, "AUDIO"],
-    [8, 6, 0, 8, 0, "AUDIO"]
+    [
+      1,
+      1,
+      0,
+      3,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      2,
+      "AUDIO"
+    ],
+    [
+      3,
+      1,
+      0,
+      6,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      4,
+      2,
+      0,
+      6,
+      2,
+      "AUDIO"
+    ],
+    [
+      5,
+      1,
+      0,
+      7,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      6,
+      2,
+      0,
+      7,
+      2,
+      "AUDIO"
+    ],
+    [
+      7,
+      3,
+      0,
+      4,
+      0,
+      "AUDIO"
+    ],
+    [
+      8,
+      6,
+      0,
+      8,
+      0,
+      "AUDIO"
+    ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "info": {
       "name": "05 - Speed Control",
-      "description": "Speed control via duration_factor: 1.0x (normal), 0.7x (faster), 1.4x (slower). >1.0 = slower, <1.0 = faster."
+      "description": "Speed control: normal (1.0x), fast (0.7x), slow (1.4x). >1.0=slower, <1.0=faster"
     }
   },
   "version": 0.4

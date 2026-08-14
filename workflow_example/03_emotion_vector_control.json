@@ -1,111 +1,204 @@
 {
-  "last_node_id": 7,
-  "last_link_id": 6,
+  "last_node_id": 6,
+  "last_link_id": 5,
   "nodes": [
     {
       "id": 1,
       "type": "BSAI_IndexTTS2.5Loader",
-      "pos": [0, 0],
-      "size": [320, 120],
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        320,
+        120
+      ],
       "flags": {},
       "order": 0,
       "mode": 0,
-      "widgets_values": [true, "auto", false, false],
+      "widgets_values": [
+        true,
+        "auto",
+        false,
+        false
+      ],
       "color": "#16727c",
       "bgcolor": "#4F0074"
     },
     {
       "id": 2,
-      "type": "LoadAudio",
-      "pos": [0, 200],
-      "size": [320, 80],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "widgets_values": ["reference.wav", "audio"],
-      "color": "#226",
-      "bgcolor": "#336"
-    },
-    {
-      "id": 6,
-      "type": "BSAI_IndexTTS2.5EmotionVector",
-      "pos": [0, 380],
-      "size": [320, 320],
+      "type": "BSAI_IndexTTS2.5LoadAudio",
+      "pos": [
+        0,
+        200
+      ],
+      "size": [
+        320,
+        80
+      ],
       "flags": {},
       "order": 2,
       "mode": 0,
       "widgets_values": [
-        0.0, 0.0, 0.8, 0.0, 0.0, 0.0, 0.0, 0.0,
+        "reference.wav"
+      ],
+      "color": "#226",
+      "bgcolor": "#336",
+      "title": "Speaker Voice"
+    },
+    {
+      "id": 6,
+      "type": "BSAI_IndexTTS2.5EmotionVector",
+      "pos": [
+        0,
+        380
+      ],
+      "size": [
+        320,
+        320
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "widgets_values": [
+        0.0,
+        0.0,
+        0.8,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
         "none"
       ],
-      "title": "Emotion Vector (Sad=0.8)",
       "color": "#633",
-      "bgcolor": "#844"
+      "bgcolor": "#844",
+      "title": "Emotion Vector (Sad=0.8)"
     },
     {
       "id": 3,
       "type": "BSAI_IndexTTS2.5Synthesis",
-      "pos": [400, 50],
-      "size": [400, 550],
+      "pos": [
+        400,
+        50
+      ],
+      "size": [
+        400,
+        550
+      ],
       "flags": {},
       "order": 3,
       "mode": 0,
       "widgets_values": [
-        "\u5bf9\u4e0d\u8d77\u561b\uff01\u6211\u7684\u8bb0\u6027\u771f\u7684\u4e0d\u592a\u597d\uff0c\u4f46\u662f\u548c\u4f60\u5728\u4e00\u8d77\u7684\u4e8b\u60c5\uff0c\u6211\u90fd\u4f1a\u52aa\u529b\u8bb0\u4f4f\u7684~",
+        "对不起嘛！我的记性真的不太好，但是和你在一起的事情，我都会努力记住的~",
         "ZH",
-        1.0, false, "", false, 1.0,
-        100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
-      ],
-      "inputs": [
-        {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 1},
-        {"name": "reference_audio", "type": "AUDIO", "link": 2},
-        {"name": "emo_vector", "type": "EMO_VECTOR", "link": 5}
+        1.0,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
       ],
       "color": "#16727c",
-      "bgcolor": "#4F0074"
+      "bgcolor": "#4F0074",
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 2
+        },
+        {
+          "name": "emo_vector",
+          "type": "EMO_VECTOR",
+          "link": 5
+        }
+      ]
     },
     {
       "id": 4,
       "type": "BSAI_IndexTTS2.5SaveAudio",
-      "pos": [850, 50],
-      "size": [320, 130],
+      "pos": [
+        850,
+        50
+      ],
+      "size": [
+        320,
+        130
+      ],
       "flags": {},
       "order": 4,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5_emo_vector", "wav", 192, 1.0],
-      "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 3}
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_emo_vector",
+        "wav",
+        192,
+        1.0
       ],
       "color": "#233",
-      "bgcolor": "#355"
-    },
-    {
-      "id": 5,
-      "type": "PreviewAudio",
-      "pos": [850, 250],
-      "size": [320, 80],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "widgets_values": [],
+      "bgcolor": "#355",
       "inputs": [
-        {"name": "audio", "type": "AUDIO", "link": 4}
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 3
+        }
       ]
     }
   ],
   "links": [
-    [1, 1, 0, 3, 0, "INDEX_TTS_MODEL"],
-    [2, 2, 0, 3, 2, "AUDIO"],
-    [3, 3, 0, 4, 0, "AUDIO"],
-    [4, 3, 0, 5, 0, "AUDIO"],
-    [5, 6, 0, 3, 4, "EMO_VECTOR"]
+    [
+      1,
+      1,
+      0,
+      3,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      2,
+      "AUDIO"
+    ],
+    [
+      3,
+      3,
+      0,
+      4,
+      0,
+      "AUDIO"
+    ],
+    [
+      5,
+      6,
+      0,
+      3,
+      4,
+      "EMO_VECTOR"
+    ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "info": {
       "name": "03 - Emotion Vector Control",
-      "description": "Direct 8D emotion vector control: [happy, angry, sad, fear, disgust, melancholy, surprise, calm] = [0, 0, 0.8, 0, 0, 0, 0, 0] (Sad=0.8)"
+      "description": "Direct 8D emotion vector: [happy,angry,sad,fear,disgust,melancholy,surprise,calm] = [0,0,0.8,0,0,0,0,0]"
     }
   },
   "version": 0.4
