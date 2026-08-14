@@ -303,6 +303,31 @@ _p(
 )
 
 
+# --- Fix 11: BeamSearchScorer.is_done (removed in transformers 5.x) ------------
+# transformers 5.x removed the entire beam_search module. The compat shim
+# creates a dummy BeamSearchScorer, but it lacks the 'is_done' property that
+# indextts calls during beam search generation:
+#   AttributeError: 'BeamSearchScorer' object has no attribute 'is_done'
+#
+# indextts ships its own complete transformers_beam_search.py with full
+# BeamSearchScorer/ConstrainedBeamSearchScorer implementations. This patch
+# changes the import to fall back to the local file when the transformers
+# version doesn't have 'is_done'.
+_p(
+    "gpt/transformers_generation_utils.py",
+    "from transformers.generation.beam_search import BeamScorer, BeamSearchScorer, ConstrainedBeamSearchScorer",
+    "try:\n"
+    "    from transformers.generation.beam_search import BeamScorer, BeamSearchScorer, ConstrainedBeamSearchScorer\n"
+    "    # On transformers 5.x, the compat shim provides a minimal BeamSearchScorer.\n"
+    "    # Prefer the local complete implementation from transformers_beam_search.py.\n"
+    "    if not hasattr(BeamSearchScorer, 'is_done') or '._compat' in getattr(BeamSearchScorer, '__module__', ''):\n"
+    "        raise ImportError('BeamSearchScorer is minimal compat shim, falling back to local')\n"
+    "except (ImportError, AttributeError):\n"
+    "    from .transformers_beam_search import BeamScorer, BeamSearchScorer, ConstrainedBeamSearchScorer",
+    "BeamSearchScorer import fallback to local transformers_beam_search (is_done)",
+)
+
+
 def find_indextts_dir(explicit=None):
     if explicit:
         return explicit

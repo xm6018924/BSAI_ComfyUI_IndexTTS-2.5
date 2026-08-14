@@ -253,6 +253,78 @@ def _patch_transformers_config_compat():
         print(f"[BSAI_IndexTTS2.5] Warning: could not patch PretrainedConfig._get_non_default_generation_parameters: {e}")
 
 
+def _patch_beam_search_compat():
+    """Patch BeamSearchScorer to ensure it has 'is_done' for transformers 5.x.
+
+    transformers 5.x removed the entire beam_search module. The compat shim
+    creates a dummy BeamSearchScorer, but earlier versions lacked the 'is_done'
+    property that indextts calls during beam search:
+      AttributeError: 'BeamSearchScorer' object has no attribute 'is_done'
+
+    indextts ships its own complete transformers_beam_search.py. If the
+    BeamSearchScorer from the compat shim is missing 'is_done', we replace it
+    in the transformers.generation.beam_search module with the local version.
+    """
+    try:
+        import transformers
+        tf_major = int(transformers.__version__.split('.')[0])
+    except Exception:
+        return
+
+    if tf_major < 5:
+        return  # transformers 4.x — beam_search module exists natively
+
+    try:
+        # Check if beam_search module exists (created by compat shim)
+        beam_search_mod = sys.modules.get('transformers.generation.beam_search')
+        if beam_search_mod is None:
+            return
+
+        BSS = getattr(beam_search_mod, 'BeamSearchScorer', None)
+        if BSS is None:
+            return
+
+        if hasattr(BSS, 'is_done'):
+            return  # already has is_done (compat shim updated or real class)
+
+        # Try to use indextts's local complete implementation
+        try:
+            from indextts.gpt.transformers_beam_search import (
+                BeamScorer as _LocalBeamScorer,
+                BeamSearchScorer as _LocalBSS,
+                ConstrainedBeamSearchScorer as _LocalCBSS,
+            )
+            beam_search_mod.BeamScorer = _LocalBeamScorer
+            beam_search_mod.BeamSearchScorer = _LocalBSS
+            beam_search_mod.ConstrainedBeamSearchScorer = _LocalCBSS
+            print("[BSAI_IndexTTS2.5] Replaced compat BeamSearchScorer with indextts local implementation (is_done)")
+        except ImportError:
+            # Local module not available yet — add is_done property as fallback
+            _orig_init = BSS.__init__
+
+            def _patched_init(self, *args, **kwargs):
+                _orig_init(self, *args, **kwargs)
+                if not hasattr(self, '_done'):
+                    import torch as _torch
+                    batch_size = getattr(self, 'batch_size', 1)
+                    num_beam_groups = getattr(self, 'num_beam_groups', 1)
+                    device = getattr(self, 'device', 'cpu')
+                    self._done = _torch.tensor(
+                        [False for _ in range(batch_size * num_beam_groups)],
+                        dtype=_torch.bool, device=device,
+                    )
+
+            @property
+            def _is_done(self):
+                return self._done.all()
+
+            BSS.__init__ = _patched_init
+            BSS.is_done = _is_done
+            print("[BSAI_IndexTTS2.5] Added is_done property to compat BeamSearchScorer (fallback)")
+    except Exception as e:
+        print(f"[BSAI_IndexTTS2.5] Warning: could not patch BeamSearchScorer.is_done: {e}")
+
+
 def _patch_bigvgan_compat():
     """Patch BigVGAN._from_pretrained for huggingface_hub 1.0+ compatibility.
 
@@ -429,6 +501,9 @@ def _get_indextts(use_bf16=True, device=None):
     # Patch PretrainedConfig._get_non_default_generation_parameters for transformers 5.x
     _patch_transformers_config_compat()
 
+    # Patch BeamSearchScorer.is_done for transformers 5.x
+    _patch_beam_search_compat()
+
     # Patch BigVGAN for huggingface_hub 1.0+ compatibility (proxies/resume_download)
     _patch_bigvgan_compat()
 
@@ -509,6 +584,9 @@ def _get_indextts(use_bf16=True, device=None):
 
         # Re-apply PretrainedConfig compat patch after install
         _patch_transformers_config_compat()
+
+        # Re-apply BeamSearchScorer compat patch after install
+        _patch_beam_search_compat()
 
         # Re-apply BigVGAN compat patch after install
         _patch_bigvgan_compat()

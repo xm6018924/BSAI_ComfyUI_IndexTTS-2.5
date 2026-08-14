@@ -307,6 +307,17 @@ try:
                 self._beam_hyps = []
                 for _ in range(batch_size):
                     self._beam_hyps.append([])
+                # Track completion state per batch group (needed by is_done property)
+                self._done = torch.tensor(
+                    [False for _ in range(batch_size * self.num_beam_groups)],
+                    dtype=torch.bool, device=device,
+                )
+
+            @property
+            def is_done(self):
+                """Whether all beam searches have finished (from transformers 4.x)."""
+                return self._done.all()
+
             def process(self, input_ids, next_scores, next_tokens, next_indices,
                         pad_token_id=None, eos_token_id=None, beam_indices=None,
                         group_index=None, decoder_prompt_len=None):
