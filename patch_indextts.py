@@ -249,6 +249,34 @@ _p(
 )
 
 
+# --- Fix 9: BigVGAN._from_pretrained proxies/resume_download defaults --------
+# huggingface_hub 1.0+ removed 'proxies' and 'resume_download' from the
+# from_pretrained -> _from_pretrained call chain. BigVGAN defines them as
+# required keyword-only arguments (no default), causing TypeError.
+# This patch adds default values so the method works on both versions.
+# (hf_hub_download still accepts them via smoothly_deprecate_legacy_arguments.)
+
+# Patch the BigVGAN used by infer_v2_5.py (s2mel/modules/bigvgan/bigvgan.py)
+_p(
+    "s2mel/modules/bigvgan/bigvgan.py",
+    "            proxies: Optional[Dict],\n"
+    "            resume_download: bool,\n",
+    "            proxies: Optional[Dict] = None,\n"
+    "            resume_download: bool = False,\n",
+    "BigVGAN _from_pretrained proxies/resume_download defaults (s2mel)",
+)
+
+# Also patch the standalone BigVGAN/bigvgan.py for completeness
+_p(
+    "BigVGAN/bigvgan.py",
+    "        proxies: Optional[Dict],\n"
+    "        resume_download: bool,\n",
+    "        proxies: Optional[Dict] = None,\n"
+    "        resume_download: bool = False,\n",
+    "BigVGAN _from_pretrained proxies/resume_download defaults (standalone)",
+)
+
+
 def find_indextts_dir(explicit=None):
     if explicit:
         return explicit

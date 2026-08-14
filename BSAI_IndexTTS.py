@@ -194,6 +194,64 @@ def _ensure_transformers_compat():
         print(f"[BSAI_IndexTTS2.5] Warning: could not inject ExtensionsTrie: {e}")
 
 
+def _patch_bigvgan_compat():
+    """Patch BigVGAN._from_pretrained for huggingface_hub 1.0+ compatibility.
+
+    huggingface_hub 1.0+ removed 'proxies' and 'resume_download' from the
+    from_pretrained -> _from_pretrained call chain, but BigVGAN defines them
+    as required keyword-only arguments (no default), causing:
+      TypeError: BigVGAN._from_pretrained() missing 2 required keyword-only
+      arguments: 'proxies' and 'resume_download'
+
+    This wrapper injects defaults (proxies=None, resume_download=False) so the
+    method works on both huggingface_hub 0.x and 1.x. The hf_hub_download call
+    inside _from_pretrained is unaffected — huggingface_hub 1.x silently
+    ignores these deprecated parameters via smoothly_deprecate_legacy_arguments.
+    """
+    try:
+        import huggingface_hub
+        hf_major = int(huggingface_hub.__version__.split('.')[0])
+    except Exception:
+        return
+
+    if hf_major < 1:
+        return  # huggingface_hub < 1.0 — no patch needed
+
+    patched_modules = []
+
+    # Patch the BigVGAN used by infer_v2_5.py
+    for _mod_path in [
+        "indextts.s2mel.modules.bigvgan.bigvgan",
+        "indextts.BigVGAN.bigvgan",
+    ]:
+        try:
+            _mod = __import__(_mod_path, fromlist=["BigVGAN"])
+            _BigVGAN = getattr(_mod, "BigVGAN", None)
+            if _BigVGAN is None:
+                continue
+            _orig_fp = _BigVGAN._from_pretrained
+
+            # Skip if already patched
+            if getattr(_orig_fp, "_bsai_patched", False):
+                patched_modules.append(f"{_mod_path} (already patched)")
+                continue
+
+            @classmethod
+            def _patched_from_pretrained(cls, **kwargs):
+                kwargs.setdefault("proxies", None)
+                kwargs.setdefault("resume_download", False)
+                return _orig_fp.__func__(cls, **kwargs)
+
+            _patched_from_pretrained._bsai_patched = True
+            _BigVGAN._from_pretrained = _patched_from_pretrained
+            patched_modules.append(_mod_path)
+        except Exception:
+            pass
+
+    if patched_modules:
+        print(f"[BSAI_IndexTTS2.5] Patched BigVGAN._from_pretrained for huggingface_hub {huggingface_hub.__version__}: {patched_modules}")
+
+
 def _get_indextts(use_bf16=True, device=None):
     """Get or create the IndexTTS singleton instance."""
     global _INDEXTTS_INSTANCE, _INDEXTTS_MODEL_DIR
@@ -221,6 +279,9 @@ def _get_indextts(use_bf16=True, device=None):
     # This ensures ExtensionsTrie (moved in transformers 5.x) is available even
     # if the _compat.py shim hasn't been loaded yet.
     _ensure_transformers_compat()
+
+    # Patch BigVGAN for huggingface_hub 1.0+ compatibility (proxies/resume_download)
+    _patch_bigvgan_compat()
 
     # Import indextts v2.5 (lazy import)
     try:
@@ -293,6 +354,9 @@ def _get_indextts(use_bf16=True, device=None):
 
         # Re-inject transformers compat symbols (in case install changed anything)
         _ensure_transformers_compat()
+
+        # Re-apply BigVGAN compat patch after install
+        _patch_bigvgan_compat()
 
         # Try importing again
         try:
