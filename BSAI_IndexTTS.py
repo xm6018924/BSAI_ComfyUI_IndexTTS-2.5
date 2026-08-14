@@ -546,7 +546,7 @@ def _patch_librosa_numba_compat():
         print(f"[BSAI_IndexTTS2.5] Warning: could not patch librosa.zero_crossings: {e}")
 
 
-def _get_indextts(use_bf16=True, device=None):
+def _get_indextts(use_bf16=True, device=None, use_qwen_emo=False):
     """Get or create the IndexTTS singleton instance."""
     global _INDEXTTS_INSTANCE, _INDEXTTS_MODEL_DIR
 
@@ -567,7 +567,7 @@ def _get_indextts(use_bf16=True, device=None):
 
     print(f"[BSAI_IndexTTS2.5] Loading IndexTTS-2.5 model from: {model_dir}")
     print(f"[BSAI_IndexTTS2.5] Config: {cfg_path}")
-    print(f"[BSAI_IndexTTS2.5] BF16: {use_bf16}, Device: {device or 'auto'}")
+    print(f"[BSAI_IndexTTS2.5] BF16: {use_bf16}, Device: {device or 'auto'}, QwenEmo: {use_qwen_emo}")
 
     # Proactively inject missing transformers symbols before importing indextts.
     # This ensures ExtensionsTrie (moved in transformers 5.x) is available even
@@ -696,6 +696,7 @@ def _get_indextts(use_bf16=True, device=None):
         model_dir=model_dir,
         use_bf16=use_bf16,
         device=device,
+        use_qwen_emo=use_qwen_emo,
     )
 
     _INDEXTTS_INSTANCE = tts
@@ -827,6 +828,7 @@ class BSAI_IndexTTS2_5Loader:
                 "device": (["auto", "cuda:0", "cpu"], {"default": "auto"}),
             },
             "optional": {
+                "use_qwen_emo": ("BOOLEAN", {"default": False}),
                 "force_reload": ("BOOLEAN", {"default": False}),
             },
         }
@@ -836,12 +838,12 @@ class BSAI_IndexTTS2_5Loader:
     FUNCTION = "load_model"
     CATEGORY = "BSAI"
 
-    def load_model(self, use_bf16=True, device="auto", force_reload=False):
+    def load_model(self, use_bf16=True, device="auto", use_qwen_emo=False, force_reload=False):
         if force_reload:
             _unload_indextts()
 
         device = None if device == "auto" else device
-        tts = _get_indextts(use_bf16=use_bf16, device=device)
+        tts = _get_indextts(use_bf16=use_bf16, device=device, use_qwen_emo=use_qwen_emo)
         return (tts,)
 
 
@@ -852,6 +854,7 @@ class BSAI_IndexTTS2_5Synthesis:
     """
     IndexTTS-2.5 voice cloning synthesis node.
     Generate speech from text using a reference audio for voice cloning.
+    Supports cross-language synthesis, emotion control, and speed control.
     """
 
     @classmethod
@@ -864,9 +867,26 @@ class BSAI_IndexTTS2_5Synthesis:
                     "multiline": True,
                 }),
                 "reference_audio": ("AUDIO",),
-                "lang": (["ZH", "EN", "JA", "ES", "zhen"], {"default": "ZH"}),
+                "lang": (["ZH", "EN", "JA", "ES", "AR", "zhen"], {"default": "ZH"}),
             },
             "optional": {
+                # --- Emotion control ---
+                "emo_audio_prompt": ("AUDIO", ),
+                "emo_alpha": ("FLOAT", {
+                    "default": 1.0, "min": 0.0, "max": 1.0, "step": 0.05,
+                }),
+                "emo_vector": ("EMO_VECTOR", ),
+                "use_emo_text": ("BOOLEAN", {"default": False}),
+                "emo_text": ("STRING", {
+                    "default": "",
+                    "multiline": True,
+                }),
+                "use_random": ("BOOLEAN", {"default": False}),
+                # --- Speed control ---
+                "duration_factor": ("FLOAT", {
+                    "default": 1.0, "min": 0.5, "max": 2.0, "step": 0.05,
+                }),
+                # --- Generation parameters ---
                 "max_text_tokens_per_segment": ("INT", {
                     "default": 100, "min": 20, "max": 600, "step": 10,
                 }),
@@ -907,6 +927,13 @@ class BSAI_IndexTTS2_5Synthesis:
         text,
         reference_audio,
         lang="ZH",
+        emo_audio_prompt=None,
+        emo_alpha=1.0,
+        emo_vector=None,
+        use_emo_text=False,
+        emo_text="",
+        use_random=False,
+        duration_factor=1.0,
         max_text_tokens_per_segment=100,
         max_mel_tokens=1500,
         temperature=0.8,
@@ -939,6 +966,28 @@ class BSAI_IndexTTS2_5Synthesis:
         _save_audio_file(ref_audio_path, ref_waveform, ref_sr)
         print(f"[BSAI_IndexTTS2.5] Reference audio saved: {ref_audio_path} (sr={ref_sr})")
 
+        # --- Handle emotion reference audio ---
+        emo_audio_path = None
+        if emo_audio_prompt is not None:
+            emo_wf = emo_audio_prompt["waveform"]
+            emo_sr = emo_audio_prompt["sample_rate"]
+            if emo_wf.dim() == 3:
+                emo_wf = emo_wf[0]
+            elif emo_wf.dim() == 1:
+                emo_wf = emo_wf.unsqueeze(0)
+            emo_audio_path = os.path.join(temp_dir, "emotion_ref.wav")
+            _save_audio_file(emo_audio_path, emo_wf, emo_sr)
+            print(f"[BSAI_IndexTTS2.5] Emotion reference audio saved: {emo_audio_path} (sr={emo_sr})")
+
+        # --- Handle emotion text ---
+        # Empty string means no custom emotion text
+        emo_text_param = emo_text.strip() if emo_text and emo_text.strip() else None
+
+        # --- Handle emotion vector ---
+        # emo_vector comes from BSAI_IndexTTS2.5EmotionVector node (a list of 8 floats)
+        # or None if not connected
+        emo_vector_param = emo_vector if emo_vector is not None else None
+
         # Build generation kwargs for v2.5 infer()
         generation_kwargs = {
             "temperature": temperature,
@@ -951,6 +1000,17 @@ class BSAI_IndexTTS2_5Synthesis:
             "do_sample": do_sample,
         }
 
+        # Log emotion settings
+        emotion_mode = "default (from speaker voice)"
+        if emo_vector_param is not None:
+            emotion_mode = f"emotion vector: {emo_vector_param}"
+        elif use_emo_text:
+            emotion_mode = f"text-based emotion (emo_text={'auto' if emo_text_param is None else repr(emo_text_param[:50])})"
+        elif emo_audio_path is not None:
+            emotion_mode = f"emotion reference audio (alpha={emo_alpha})"
+        print(f"[BSAI_IndexTTS2.5] Emotion mode: {emotion_mode}")
+        print(f"[BSAI_IndexTTS2.5] Duration factor: {duration_factor}, Use random: {use_random}")
+
         try:
             print(f"[BSAI_IndexTTS2.5] Synthesizing (lang={lang})...")
             tts_model.infer(
@@ -958,6 +1018,13 @@ class BSAI_IndexTTS2_5Synthesis:
                 text=text,
                 output_path=out_audio_path,
                 lang=lang,
+                emo_audio_prompt=emo_audio_path,
+                emo_alpha=emo_alpha,
+                emo_vector=emo_vector_param,
+                use_emo_text=use_emo_text,
+                emo_text=emo_text_param,
+                use_random=use_random,
+                duration_factor=duration_factor,
                 verbose=verbose,
                 max_text_tokens_per_segment=max_text_tokens_per_segment,
                 **generation_kwargs,
@@ -985,7 +1052,14 @@ class BSAI_IndexTTS2_5Synthesis:
             audio_dict = _audio_tensor_to_dict(audio_waveform, audio_sr)
 
             duration = audio_waveform.shape[-1] / audio_sr
-            status = f"Success | Duration: {duration:.2f}s | Sample Rate: {audio_sr}Hz | Lang: {lang}"
+            status_parts = [
+                f"Success | Duration: {duration:.2f}s",
+                f"Sample Rate: {audio_sr}Hz",
+                f"Lang: {lang}",
+                f"Emotion: {emotion_mode}",
+                f"Speed: {duration_factor:.2f}x",
+            ]
+            status = " | ".join(status_parts)
             print(f"[BSAI_IndexTTS2.5] {status}")
 
             return (audio_dict, status)
@@ -1002,6 +1076,63 @@ class BSAI_IndexTTS2_5Synthesis:
                 shutil.rmtree(temp_dir, ignore_errors=True)
             except Exception:
                 pass
+
+
+# ===========================================================================
+#  Node 2b: BSAI_IndexTTS2.5EmotionVector (helper)
+# ===========================================================================
+class BSAI_IndexTTS2_5EmotionVector:
+    """
+    Construct an 8-dimensional emotion vector for IndexTTS-2.5.
+    Emotion order: [Happy, Angry, Sad, Fear, Disgust, Melancholy, Surprise, Calm]
+    Each value range: 0.0 - 1.0
+    """
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "happy": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "angry": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "sad": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "fear": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "disgust": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "melancholy": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "surprise": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "calm": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+            },
+            "optional": {
+                "preset": (["none", "happy", "angry", "sad", "fear", "disgust",
+                            "melancholy", "surprise", "calm"], {"default": "none"}),
+            },
+        }
+
+    RETURN_TYPES = ("EMO_VECTOR",)
+    RETURN_NAMES = ("emo_vector",)
+    FUNCTION = "build_vector"
+    CATEGORY = "BSAI"
+
+    def build_vector(self, happy, angry, sad, fear, disgust, melancholy, surprise, calm, preset="none"):
+        # Apply preset if selected (overrides individual values)
+        presets = {
+            "happy":      [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "angry":      [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "sad":        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "fear":       [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            "disgust":    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            "melancholy": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            "surprise":   [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+            "calm":       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+        }
+
+        if preset != "none" and preset in presets:
+            vec = presets[preset]
+            print(f"[BSAI_IndexTTS2.5] Emotion vector preset: {preset} -> {vec}")
+        else:
+            vec = [happy, angry, sad, fear, disgust, melancholy, surprise, calm]
+            print(f"[BSAI_IndexTTS2.5] Emotion vector: {vec}")
+
+        return (vec,)
 
 
 # ===========================================================================
@@ -1103,6 +1234,7 @@ class BSAI_IndexTTS2_5UnloadModel:
 NODE_CLASS_MAPPINGS = {
     "BSAI_IndexTTS2.5Loader": BSAI_IndexTTS2_5Loader,
     "BSAI_IndexTTS2.5Synthesis": BSAI_IndexTTS2_5Synthesis,
+    "BSAI_IndexTTS2.5EmotionVector": BSAI_IndexTTS2_5EmotionVector,
     "BSAI_IndexTTS2.5SaveAudio": BSAI_IndexTTS2_5SaveAudio,
     "BSAI_IndexTTS2.5UnloadModel": BSAI_IndexTTS2_5UnloadModel,
 }
@@ -1110,6 +1242,7 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "BSAI_IndexTTS2.5Loader": "BSAI IndexTTS2.5 Loader",
     "BSAI_IndexTTS2.5Synthesis": "BSAI IndexTTS2.5 Synthesis",
+    "BSAI_IndexTTS2.5EmotionVector": "BSAI IndexTTS2.5 Emotion Vector",
     "BSAI_IndexTTS2.5SaveAudio": "BSAI IndexTTS2.5 Save Audio",
     "BSAI_IndexTTS2.5UnloadModel": "BSAI IndexTTS2.5 Unload Model",
 }

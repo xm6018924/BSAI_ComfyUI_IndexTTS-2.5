@@ -35,7 +35,7 @@
       "order": 3,
       "mode": 0,
       "widgets_values": [
-        "Hello, this is a test of IndexTTS-2.5 voice cloning. I can speak in any voice you provide as reference audio.",
+        "\u5927\u5bb6\u597d\uff0c\u8fd9\u662fIndexTTS-2.5\u8bed\u97f3\u514b\u9686\u6d4b\u8bd5\u3002\u6211\u53ef\u4ee5\u7528\u4efb\u4f55\u53c2\u8003\u97f3\u9891\u6765\u514b\u9686\u4f60\u7684\u58f0\u97f3\u3002",
         "ZH",
         1.0, false, "", false, 1.0,
         100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
@@ -55,7 +55,7 @@
       "flags": {},
       "order": 4,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5", "wav", 192, 1.0],
+      "widgets_values": ["BSAI_IndexTTS2_5_basic", "wav", 192, 1.0],
       "inputs": [
         {"name": "audio", "type": "AUDIO", "link": 3}
       ],
@@ -86,8 +86,8 @@
   "config": {},
   "extra": {
     "info": {
-      "name": "BSAI IndexTTS-2.5 Default Workflow",
-      "description": "Voice cloning TTS: load model -> reference audio -> synthesize -> save/preview"
+      "name": "01 - Basic Voice Cloning",
+      "description": "Basic voice cloning: load model -> reference audio -> synthesize -> save/preview"
     }
   },
   "version": 0.4

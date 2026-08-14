@@ -10,7 +10,7 @@
       "flags": {},
       "order": 0,
       "mode": 0,
-      "widgets_values": [true, "auto", false, false],
+      "widgets_values": [true, "auto", true, false],
       "color": "#16727c",
       "bgcolor": "#4F0074"
     },
@@ -35,15 +35,16 @@
       "order": 3,
       "mode": 0,
       "widgets_values": [
-        "Hello, this is a test of IndexTTS-2.5 voice cloning. I can speak in any voice you provide as reference audio.",
+        "\u5feb\u8eb2\u8d77\u6765\uff01\u662f\u4ed6\u8981\u6765\u4e86\uff01\u4ed6\u8981\u6765\u6293\u6211\u4eec\u4e86\uff01",
         "ZH",
-        1.0, false, "", false, 1.0,
+        0.6, true, "\u4f60\u5413\u6b7b\u6211\u4e86\uff01\u4f60\u662f\u9b3c\u5417\uff1f", false, 1.0,
         100, 1500, 0.8, 0.8, 30, 0.0, 3, 10.0, true, false
       ],
       "inputs": [
         {"name": "tts_model", "type": "INDEX_TTS_MODEL", "link": 1},
         {"name": "reference_audio", "type": "AUDIO", "link": 2}
       ],
+      "title": "Text-Based Emotion Synthesis",
       "color": "#16727c",
       "bgcolor": "#4F0074"
     },
@@ -55,7 +56,7 @@
       "flags": {},
       "order": 4,
       "mode": 0,
-      "widgets_values": ["BSAI_IndexTTS2_5", "wav", 192, 1.0],
+      "widgets_values": ["BSAI_IndexTTS2_5_emo_text", "wav", 192, 1.0],
       "inputs": [
         {"name": "audio", "type": "AUDIO", "link": 3}
       ],
@@ -86,8 +87,8 @@
   "config": {},
   "extra": {
     "info": {
-      "name": "BSAI IndexTTS-2.5 Default Workflow",
-      "description": "Voice cloning TTS: load model -> reference audio -> synthesize -> save/preview"
+      "name": "04 - Text-Based Emotion",
+      "description": "Text-based emotion: use_emo_text=True, emo_text='You scared me! Are you a ghost?', emo_alpha=0.6. Emotion is auto-generated from the description text via Qwen3 model."
     }
   },
   "version": 0.4
