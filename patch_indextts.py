@@ -277,6 +277,32 @@ _p(
 )
 
 
+# --- Fix 10: _get_non_default_generation_parameters (removed in transformers 5.x) --
+# transformers 5.x removed PretrainedConfig._get_non_default_generation_parameters,
+# but indextts calls it in two places: during generation (generation_utils) and
+# during model saving (modeling_utils). Using getattr with a lambda fallback
+# returns an empty dict when the method is missing, which is safe because:
+#   - In generation_utils: len({}) > 0 is False, skipping the legacy path
+#   - In modeling_utils: the empty dict causes the misplaced-parameter
+#     check to be skipped (no parameters to move)
+
+# Patch 1: transformers_generation_utils.py (generation time)
+_p(
+    "gpt/transformers_generation_utils.py",
+    "                and len(self.config._get_non_default_generation_parameters()) > 0  # 3)",
+    "                and len(getattr(self.config, '_get_non_default_generation_parameters', lambda: {})()) > 0  # 3)",
+    "_get_non_default_generation_parameters getattr fallback (generation_utils)",
+)
+
+# Patch 2: transformers_modeling_utils.py (model save time)
+_p(
+    "gpt/transformers_modeling_utils.py",
+    "                misplaced_generation_parameters = model_to_save.config._get_non_default_generation_parameters()",
+    "                misplaced_generation_parameters = getattr(model_to_save.config, '_get_non_default_generation_parameters', lambda: {})()",
+    "_get_non_default_generation_parameters getattr fallback (modeling_utils)",
+)
+
+
 def find_indextts_dir(explicit=None):
     if explicit:
         return explicit

@@ -194,6 +194,65 @@ def _ensure_transformers_compat():
         print(f"[BSAI_IndexTTS2.5] Warning: could not inject ExtensionsTrie: {e}")
 
 
+def _patch_transformers_config_compat():
+    """Patch PretrainedConfig._get_non_default_generation_parameters for transformers 5.x.
+
+    transformers 5.x removed the _get_non_default_generation_parameters method
+    from PretrainedConfig, but indextts still calls it during generation
+    (transformers_generation_utils.py) and model saving
+    (transformers_modeling_utils.py), causing:
+      AttributeError: 'GPT2Config' object has no attribute
+      '_get_non_default_generation_parameters'
+
+    This method returns a dict of config attributes that differ from the
+    default GenerationConfig values. We re-implement it using hasattr()
+    instead of `in` since GenerationConfig 5.x no longer supports __contains__.
+    """
+    try:
+        import transformers
+        tf_major = int(transformers.__version__.split('.')[0])
+    except Exception:
+        return
+
+    if tf_major < 5:
+        return  # transformers 4.x — method exists natively
+
+    try:
+        from transformers.configuration_utils import PretrainedConfig
+        from transformers import GenerationConfig
+
+        if hasattr(PretrainedConfig, '_get_non_default_generation_parameters'):
+            return  # already patched or available
+
+        def _get_non_default_generation_parameters(self):
+            """Compare config attributes with default GenerationConfig values.
+
+            Returns a dict of parameters with non-default values that exist
+            in the default GenerationConfig. Replicates transformers 4.x.
+            """
+            config_dict = self.to_dict()
+            try:
+                generation_config = GenerationConfig()
+            except Exception:
+                return {}
+
+            non_default = {}
+            for config_key in config_dict:
+                if config_key == "is_decoder":
+                    continue
+                if hasattr(generation_config, config_key):
+                    config_val = config_dict[config_key]
+                    gen_val = getattr(generation_config, config_key)
+                    if config_val != gen_val:
+                        non_default[config_key] = config_val
+            return non_default
+
+        PretrainedConfig._get_non_default_generation_parameters = _get_non_default_generation_parameters
+        print(f"[BSAI_IndexTTS2.5] Patched PretrainedConfig._get_non_default_generation_parameters for transformers {transformers.__version__}")
+    except Exception as e:
+        print(f"[BSAI_IndexTTS2.5] Warning: could not patch PretrainedConfig._get_non_default_generation_parameters: {e}")
+
+
 def _patch_bigvgan_compat():
     """Patch BigVGAN._from_pretrained for huggingface_hub 1.0+ compatibility.
 
@@ -367,6 +426,9 @@ def _get_indextts(use_bf16=True, device=None):
     # if the _compat.py shim hasn't been loaded yet.
     _ensure_transformers_compat()
 
+    # Patch PretrainedConfig._get_non_default_generation_parameters for transformers 5.x
+    _patch_transformers_config_compat()
+
     # Patch BigVGAN for huggingface_hub 1.0+ compatibility (proxies/resume_download)
     _patch_bigvgan_compat()
 
@@ -444,6 +506,9 @@ def _get_indextts(use_bf16=True, device=None):
 
         # Re-inject transformers compat symbols (in case install changed anything)
         _ensure_transformers_compat()
+
+        # Re-apply PretrainedConfig compat patch after install
+        _patch_transformers_config_compat()
 
         # Re-apply BigVGAN compat patch after install
         _patch_bigvgan_compat()

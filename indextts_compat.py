@@ -528,6 +528,45 @@ except Exception as _e:
         warnings.warn(f"[indextts._compat] Section 10 (model_parallel_utils) failed: {_e}")
 
 # ===========================================================================
+# 11. PretrainedConfig: _get_non_default_generation_parameters
+#     transformers 5.x removed this method from PretrainedConfig, but indextts
+#     still calls it during generation and model saving. It returns a dict of
+#     config attributes that differ from the default GenerationConfig values.
+# ===========================================================================
+try:
+    from transformers.configuration_utils import PretrainedConfig
+    from transformers import GenerationConfig
+
+    if not hasattr(PretrainedConfig, '_get_non_default_generation_parameters'):
+        def _get_non_default_generation_parameters(self):
+            """Compare config attributes with default GenerationConfig values.
+
+            Returns a dict of parameters that have non-default values and exist
+            in the default GenerationConfig. Replicates transformers 4.x behavior.
+            """
+            config_dict = self.to_dict()
+            try:
+                generation_config = GenerationConfig()
+            except Exception:
+                return {}
+
+            non_default = {}
+            for config_key in config_dict:
+                if config_key in ("is_decoder",):
+                    continue
+                if hasattr(generation_config, config_key):
+                    config_val = config_dict[config_key]
+                    gen_val = getattr(generation_config, config_key)
+                    if config_val != gen_val:
+                        non_default[config_key] = config_val
+            return non_default
+
+        PretrainedConfig._get_non_default_generation_parameters = _get_non_default_generation_parameters
+except Exception as _e:
+    if _TF_MAJOR >= 5:
+        warnings.warn(f"[indextts._compat] Section 11 (PretrainedConfig._get_non_default_generation_parameters) failed: {_e}")
+
+# ===========================================================================
 # 12. pytorch_utils: prune_layer (depends on section 2)
 # ===========================================================================
 try:
