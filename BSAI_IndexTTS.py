@@ -252,6 +252,93 @@ def _patch_bigvgan_compat():
         print(f"[BSAI_IndexTTS2.5] Patched BigVGAN._from_pretrained for huggingface_hub {huggingface_hub.__version__}: {patched_modules}")
 
 
+def _patch_librosa_numba_compat():
+    """Patch librosa.zero_crossings to avoid numba @stencil bug with numpy 2.x.
+
+    numba 0.66.0 + numpy 2.x has a bug where the @stencil decorator internally
+    calls np.empty(shape, dtype=bool) which numba cannot compile, causing:
+      TypeError: No implementation of function Function(<built-in function empty>)
+      found for signature: empty(UniTuple(int64 x 1), dtype=Function(<class 'bool'>))
+
+    This replaces librosa's numba-accelerated zero_crossings with a pure numpy
+    implementation that produces identical results.
+    """
+    try:
+        import numba
+        import numpy as _np
+        numba_major = int(numba.__version__.split('.')[0])
+        numpy_major = int(_np.__version__.split('.')[0])
+    except Exception:
+        return
+
+    # Only patch if numba + numpy 2.x (the buggy combination)
+    if numpy_major < 2:
+        return
+
+    try:
+        import librosa.core.audio as _lca
+
+        # Check if already patched
+        if getattr(_lca.zero_crossings, '_bsai_patched', False):
+            return
+
+        def _zero_crossings_numpy(
+            y,
+            *,
+            threshold=1e-10,
+            ref_magnitude=None,
+            pad=True,
+            zero_pos=True,
+            axis=-1,
+        ):
+            """Pure numpy replacement for librosa.zero_crossings.
+
+            Reproduces the exact semantics of the numba @stencil version:
+            - Threshold: values with |x| <= threshold are clipped to 0
+            - zero_pos=True: uses signbit (0 treated as positive)
+            - zero_pos=False: uses sign (0 distinct from +/-1)
+            - Output[i] = sign(x[i]) != sign(x[i-1]) for i > 0
+            - Output[0] = pad
+            """
+            if callable(ref_magnitude):
+                threshold = threshold * ref_magnitude(_np.abs(y))
+            elif ref_magnitude is not None:
+                threshold = threshold * ref_magnitude
+
+            yi = y.swapaxes(-1, axis)
+
+            # Clip values within threshold to 0 (same as stencil)
+            x = yi.copy()
+            mask = _np.abs(x) <= threshold
+            x[mask] = 0
+
+            # Compute sign for each element
+            if zero_pos:
+                signs = _np.signbit(x)
+            else:
+                signs = _np.sign(x)
+
+            # Zero crossing: sign change between consecutive samples
+            z = _np.empty(yi.shape, dtype=bool)
+            z[..., 1:] = signs[..., 1:] != signs[..., :-1]
+            z[..., 0] = pad
+
+            # Swap back to original axis
+            z = z.swapaxes(-1, axis)
+            return z
+
+        _zero_crossings_numpy._bsai_patched = True
+
+        # Also patch the librosa top-level import
+        import librosa
+        _lca.zero_crossings = _zero_crossings_numpy
+        librosa.zero_crossings = _zero_crossings_numpy
+
+        print(f"[BSAI_IndexTTS2.5] Patched librosa.zero_crossings with pure numpy implementation (numba {numba.__version__} + numpy {_np.__version__})")
+    except Exception as e:
+        print(f"[BSAI_IndexTTS2.5] Warning: could not patch librosa.zero_crossings: {e}")
+
+
 def _get_indextts(use_bf16=True, device=None):
     """Get or create the IndexTTS singleton instance."""
     global _INDEXTTS_INSTANCE, _INDEXTTS_MODEL_DIR
@@ -282,6 +369,9 @@ def _get_indextts(use_bf16=True, device=None):
 
     # Patch BigVGAN for huggingface_hub 1.0+ compatibility (proxies/resume_download)
     _patch_bigvgan_compat()
+
+    # Patch librosa.zero_crossings for numba/numpy 2.x compatibility
+    _patch_librosa_numba_compat()
 
     # Import indextts v2.5 (lazy import)
     try:
@@ -357,6 +447,9 @@ def _get_indextts(use_bf16=True, device=None):
 
         # Re-apply BigVGAN compat patch after install
         _patch_bigvgan_compat()
+
+        # Re-apply librosa numba compat patch after install
+        _patch_librosa_numba_compat()
 
         # Try importing again
         try:
