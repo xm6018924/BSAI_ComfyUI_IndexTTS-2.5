@@ -328,6 +328,46 @@ _p(
 )
 
 
+# --- Fix 12: GenerationConfig attribute access fallbacks (transformers 5.x) -----
+# transformers 5.x removed several attributes from GenerationConfig that indextts
+# accesses directly (without hasattr/getattr). The compat shim (_compat.py) and
+# runtime patch (_patch_generation_config_compat in BSAI_IndexTTS.py) add
+# class-level defaults, but these source patches provide a third layer of defense
+# for maximum cross-version robustness.
+#
+# Patched attributes:
+#   - _original_object_hash: removed in 5.x, accessed at line ~1523
+#     (generation config migration check). getattr fallback returns 0, which
+#     won't equal hash(self), safely skipping the migration path.
+#   - return_legacy_cache: removed in 5.x, accessed at lines ~2394, 2401
+#     (legacy cache conversion). getattr fallback returns False, which makes
+#     the `is not False` check fail, safely skipping cache conversion.
+
+# Patch 1: _original_object_hash (generation config migration check)
+_p(
+    "gpt/transformers_generation_utils.py",
+    "                and self.generation_config._original_object_hash == hash(self.generation_config)  # 2)",
+    "                and getattr(self.generation_config, '_original_object_hash', 0) == hash(self.generation_config)  # 2)",
+    "_original_object_hash getattr fallback (migration check)",
+)
+
+# Patch 2: return_legacy_cache (legacy cache conversion check)
+_p(
+    "gpt/transformers_generation_utils.py",
+    "            generation_config.return_legacy_cache is not False  # Should check for `True` after v4.47",
+    "            getattr(generation_config, 'return_legacy_cache', False) is not False  # Should check for `True` after v4.47",
+    "return_legacy_cache getattr fallback (conversion check)",
+)
+
+# Patch 3: return_legacy_cache (assignment)
+_p(
+    "gpt/transformers_generation_utils.py",
+    "            should_convert_cache = generation_config.return_legacy_cache",
+    "            should_convert_cache = getattr(generation_config, 'return_legacy_cache', False)",
+    "return_legacy_cache getattr fallback (assignment)",
+)
+
+
 def find_indextts_dir(explicit=None):
     if explicit:
         return explicit

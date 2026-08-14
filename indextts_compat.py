@@ -877,5 +877,57 @@ try:
 except Exception:
     pass
 
+# ===========================================================================
+# 24. GenerationConfig: missing attributes (transformers 5.x)
+#     Comprehensive fix for ALL attributes that indextts accesses on
+#     GenerationConfig but were removed in transformers 5.x.
+#     Each attribute is guarded with hasattr for version compatibility.
+# ===========================================================================
+try:
+    from transformers import GenerationConfig as _GC
+
+    # return_legacy_cache: In 4.x, controlled whether to return tuple-based
+    # legacy KV cache. Removed in 5.x — DynamicCache is the only format.
+    # Default False = never convert to legacy format (safe for 5.x).
+    if not hasattr(_GC, 'return_legacy_cache'):
+        _GC.return_legacy_cache = False
+
+    # _original_object_hash: In 4.x, set in __init__ to detect config modifications.
+    # Used in generation config migration check. Setting to 0 makes the equality
+    # check fail safely (skips unnecessary migration path).
+    if not hasattr(_GC, '_original_object_hash'):
+        _GC._original_object_hash = 0
+
+    # _bos_token_tensor, _eos_token_tensor, _pad_token_tensor,
+    # _decoder_start_token_tensor: In 4.x, cached tensor versions of token IDs.
+    # indextts sets these on instances before generation (lines ~1898-1901).
+    # Default None ensures safe access before they're explicitly set.
+    for _attr in ('_bos_token_tensor', '_eos_token_tensor',
+                  '_pad_token_tensor', '_decoder_start_token_tensor'):
+        if not hasattr(_GC, _attr):
+            setattr(_GC, _attr, None)
+
+except Exception as _e:
+    if _TF_MAJOR >= 5:
+        warnings.warn(f"[indextts._compat] Section 24 (GenerationConfig attributes) failed: {_e}")
+
+# ===========================================================================
+# 25. PretrainedConfig: missing attributes (transformers 5.x)
+#     _pre_quantization_dtype and sliding_window are accessed by indextts
+#     during model saving/loading but may not exist on all config classes.
+# ===========================================================================
+try:
+    from transformers.configuration_utils import PretrainedConfig as _PC
+
+    if not hasattr(_PC, '_pre_quantization_dtype'):
+        _PC._pre_quantization_dtype = None
+
+    if not hasattr(_PC, 'sliding_window'):
+        _PC.sliding_window = None
+
+except Exception as _e:
+    if _TF_MAJOR >= 5:
+        warnings.warn(f"[indextts._compat] Section 25 (PretrainedConfig attributes) failed: {_e}")
+
 if _TF_MAJOR >= 5:
     print("[indextts._compat] Compatibility shim loaded successfully for transformers 5.x")

@@ -253,6 +253,82 @@ def _patch_transformers_config_compat():
         print(f"[BSAI_IndexTTS2.5] Warning: could not patch PretrainedConfig._get_non_default_generation_parameters: {e}")
 
 
+def _patch_generation_config_compat():
+    """Patch GenerationConfig and PretrainedConfig with missing attributes for transformers 5.x.
+
+    transformers 5.x removed several attributes from GenerationConfig that indextts
+    accesses during generation:
+      - return_legacy_cache: controlled legacy KV cache format (removed in 5.x)
+      - _original_object_hash: config migration check (removed in 5.x)
+      - _bos_token_tensor, _eos_token_tensor, _pad_token_tensor,
+        _decoder_start_token_tensor: cached tensor versions of token IDs
+
+    Also patches PretrainedConfig:
+      - _pre_quantization_dtype: quantization dtype tracking
+      - sliding_window: sliding window attention config
+
+    Each attribute is guarded with hasattr so this is a no-op on transformers 4.x
+    (where all attributes exist natively). This provides a belt-and-suspenders
+    fallback in case the _compat.py shim hasn't been loaded yet.
+    """
+    try:
+        import transformers
+        tf_major = int(transformers.__version__.split('.')[0])
+    except Exception:
+        return
+
+    if tf_major < 5:
+        return  # transformers 4.x — attributes exist natively
+
+    try:
+        from transformers import GenerationConfig as _GC
+        from transformers.configuration_utils import PretrainedConfig as _PC
+
+        _patched = []
+
+        # --- GenerationConfig class-level defaults ---
+        # return_legacy_cache: In 4.x, controlled whether to return tuple-based
+        # legacy KV cache. Removed in 5.x — DynamicCache is the only format.
+        # Default False = never convert to legacy format (safe for 5.x).
+        if not hasattr(_GC, 'return_legacy_cache'):
+            _GC.return_legacy_cache = False
+            _patched.append('return_legacy_cache')
+
+        # _original_object_hash: In 4.x, set in __init__ to detect config
+        # modifications. Used in generation config migration check (line ~1523).
+        # Setting to 0 makes the equality check fail safely (skips migration).
+        if not hasattr(_GC, '_original_object_hash'):
+            _GC._original_object_hash = 0
+            _patched.append('_original_object_hash')
+
+        # _bos_token_tensor, _eos_token_tensor, _pad_token_tensor,
+        # _decoder_start_token_tensor: In 4.x, cached tensor versions of token
+        # IDs. indextts sets these on instances before generation (lines ~1898-1901).
+        # Default None ensures safe access before they're explicitly set.
+        for _attr in ('_bos_token_tensor', '_eos_token_tensor',
+                      '_pad_token_tensor', '_decoder_start_token_tensor'):
+            if not hasattr(_GC, _attr):
+                setattr(_GC, _attr, None)
+                _patched.append(_attr)
+
+        # --- PretrainedConfig class-level defaults ---
+        # _pre_quantization_dtype: accessed during model saving/loading.
+        # Some indextts code paths already use hasattr guard, but not all.
+        if not hasattr(_PC, '_pre_quantization_dtype'):
+            _PC._pre_quantization_dtype = None
+            _patched.append('_pre_quantization_dtype')
+
+        # sliding_window: accessed during model config initialization.
+        if not hasattr(_PC, 'sliding_window'):
+            _PC.sliding_window = None
+            _patched.append('sliding_window')
+
+        if _patched:
+            print(f"[BSAI_IndexTTS2.5] Patched missing attributes for transformers {transformers.__version__}: {_patched}")
+    except Exception as e:
+        print(f"[BSAI_IndexTTS2.5] Warning: could not patch GenerationConfig/PretrainedConfig attributes: {e}")
+
+
 def _patch_beam_search_compat():
     """Patch BeamSearchScorer to ensure it has 'is_done' for transformers 5.x.
 
@@ -501,6 +577,9 @@ def _get_indextts(use_bf16=True, device=None):
     # Patch PretrainedConfig._get_non_default_generation_parameters for transformers 5.x
     _patch_transformers_config_compat()
 
+    # Patch GenerationConfig/PretrainedConfig missing attributes for transformers 5.x
+    _patch_generation_config_compat()
+
     # Patch BeamSearchScorer.is_done for transformers 5.x
     _patch_beam_search_compat()
 
@@ -584,6 +663,9 @@ def _get_indextts(use_bf16=True, device=None):
 
         # Re-apply PretrainedConfig compat patch after install
         _patch_transformers_config_compat()
+
+        # Re-apply GenerationConfig/PretrainedConfig attribute compat patch after install
+        _patch_generation_config_compat()
 
         # Re-apply BeamSearchScorer compat patch after install
         _patch_beam_search_compat()
