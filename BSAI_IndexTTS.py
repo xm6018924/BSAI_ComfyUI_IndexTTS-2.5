@@ -109,6 +109,91 @@ def _reapply_compat_shim():
             print("[BSAI_IndexTTS2.5] Patched indextts __init__.py for compat")
 
 
+def _clear_indextts_modules():
+    """Remove indextts and its submodules from sys.modules cache.
+
+    When indextts is partially imported (and fails) before the compat shim is
+    applied, Python caches the broken module in sys.modules. Subsequent import
+    attempts reuse the cached broken module instead of re-running __init__.py.
+    Clearing the cache forces a fresh import that picks up the compat shim.
+    """
+    keys_to_remove = [k for k in sys.modules if k == 'indextts' or k.startswith('indextts.')]
+    for key in keys_to_remove:
+        del sys.modules[key]
+    if keys_to_remove:
+        print(f"[BSAI_IndexTTS2.5] Cleared {len(keys_to_remove)} cached indextts modules from sys.modules")
+
+
+def _ensure_transformers_compat():
+    """Proactively inject critical missing symbols into transformers before importing indextts.
+
+    In transformers 5.x, several symbols were removed or relocated. The compat
+    shim (_compat.py) handles this, but only if it's loaded via indextts/__init__.py.
+    This function provides a belt-and-suspenders fallback: it directly injects
+    the most critical missing symbol (ExtensionsTrie) so that the import succeeds
+    even if the compat shim hasn't been loaded yet.
+    """
+    try:
+        import transformers
+        tf_major = int(transformers.__version__.split('.')[0])
+    except Exception:
+        return
+
+    if tf_major < 5:
+        return  # transformers 4.x — symbols should be available natively
+
+    # --- Inject ExtensionsTrie into transformers.tokenization_utils ---
+    # In transformers 5.x, ExtensionsTrie was moved to tokenization_python.
+    # indextts imports it from tokenization_utils, so we inject it there.
+    try:
+        import transformers.tokenization_utils as _tu
+        if not hasattr(_tu, 'ExtensionsTrie'):
+            try:
+                from transformers.tokenization_python import ExtensionsTrie
+                _tu.ExtensionsTrie = ExtensionsTrie
+                print("[BSAI_IndexTTS2.5] Injected ExtensionsTrie (from tokenization_python) into transformers.tokenization_utils")
+            except ImportError:
+                # tokenization_python not available — define a minimal ExtensionsTrie
+                class ExtensionsTrie:
+                    """Minimal ExtensionsTrie fallback (matches transformers 4.x API)."""
+                    def __init__(self, vocab=None):
+                        self.data = {}
+                        if vocab:
+                            for token in vocab:
+                                self.add(token)
+
+                    def add(self, word):
+                        node = self.data
+                        for ch in word:
+                            if ch not in node:
+                                node[ch] = {}
+                            node = node[ch]
+                        node[None] = word
+
+                    def split(self, text):
+                        states = [(self.data, 0)]
+                        results = []
+                        for i, ch in enumerate(text):
+                            new_states = []
+                            for state, start in states:
+                                if ch in state:
+                                    new_states.append((state[ch], start))
+                                if None in state:
+                                    results.append((state[None], start, i))
+                            if ch in self.data:
+                                new_states.append((self.data[ch], i))
+                            states = new_states
+                        for state, start in states:
+                            if None in state:
+                                results.append((state[None], start, len(text)))
+                        return results
+
+                _tu.ExtensionsTrie = ExtensionsTrie
+                print("[BSAI_IndexTTS2.5] Injected fallback ExtensionsTrie into transformers.tokenization_utils")
+    except Exception as e:
+        print(f"[BSAI_IndexTTS2.5] Warning: could not inject ExtensionsTrie: {e}")
+
+
 def _get_indextts(use_bf16=True, device=None):
     """Get or create the IndexTTS singleton instance."""
     global _INDEXTTS_INSTANCE, _INDEXTTS_MODEL_DIR
@@ -131,6 +216,11 @@ def _get_indextts(use_bf16=True, device=None):
     print(f"[BSAI_IndexTTS2.5] Loading IndexTTS-2.5 model from: {model_dir}")
     print(f"[BSAI_IndexTTS2.5] Config: {cfg_path}")
     print(f"[BSAI_IndexTTS2.5] BF16: {use_bf16}, Device: {device or 'auto'}")
+
+    # Proactively inject missing transformers symbols before importing indextts.
+    # This ensures ExtensionsTrie (moved in transformers 5.x) is available even
+    # if the _compat.py shim hasn't been loaded yet.
+    _ensure_transformers_compat()
 
     # Import indextts v2.5 (lazy import)
     try:
@@ -194,6 +284,15 @@ def _get_indextts(use_bf16=True, device=None):
             _reapply_compat_shim()
         except Exception as _e:
             print(f"[BSAI_IndexTTS2.5] Warning: could not apply compat shim: {_e}")
+
+        # Clear cached indextts modules so the retry gets a fresh import.
+        # The first import may have cached a broken indextts module (without the
+        # compat shim), which would cause the retry to fail even after the shim
+        # is applied on disk.
+        _clear_indextts_modules()
+
+        # Re-inject transformers compat symbols (in case install changed anything)
+        _ensure_transformers_compat()
 
         # Try importing again
         try:

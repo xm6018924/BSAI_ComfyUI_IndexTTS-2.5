@@ -122,36 +122,56 @@ try:
     import transformers.tokenization_utils as _tokenization_utils
 
     if not hasattr(_tokenization_utils, 'ExtensionsTrie'):
-        class ExtensionsTrie:
-            """A trie for tokenization extensions (from transformers 4.x)."""
-            def __init__(self):
-                self.data = {}
-            def add(self, word):
-                node = self.data
-                for ch in word:
-                    if ch not in node:
-                        node[ch] = {}
-                    node[ch] = node
-                node[None] = word
-            def split(self, text):
-                """Split text using the trie."""
-                states = [(self.data, 0)]
-                results = []
-                for i, ch in enumerate(text):
-                    new_states = []
+        # Try importing from the new location (transformers 5.x: tokenization_python)
+        _ext_trie_imported = False
+        try:
+            from transformers.tokenization_python import ExtensionsTrie
+            _tokenization_utils.ExtensionsTrie = ExtensionsTrie
+            _ext_trie_imported = True
+        except ImportError:
+            pass
+
+        if not _ext_trie_imported:
+            class ExtensionsTrie:
+                """A trie for tokenization extensions (matches transformers 4.x API).
+
+                Accepts an optional vocab dict in __init__ (indextts calls
+                ExtensionsTrie(tokenizer.get_vocab()) where get_vocab() returns
+                a dict of {token_string: token_id}).
+                """
+                def __init__(self, data=None):
+                    self.data = {}
+                    if data:
+                        for word in data:
+                            self.add(word)
+
+                def add(self, word):
+                    node = self.data
+                    for ch in word:
+                        if ch not in node:
+                            node[ch] = {}
+                        node = node[ch]
+                    node[None] = word
+
+                def split(self, text):
+                    """Split text using the trie."""
+                    states = [(self.data, 0)]
+                    results = []
+                    for i, ch in enumerate(text):
+                        new_states = []
+                        for state, start in states:
+                            if ch in state:
+                                new_states.append((state[ch], start))
+                            if None in state:
+                                results.append((state[None], start, i))
+                        if ch in self.data:
+                            new_states.append((self.data[ch], i))
+                        states = new_states
                     for state, start in states:
-                        if ch in state:
-                            new_states.append((state[ch], start))
                         if None in state:
-                            results.append((state[None], start, i))
-                    if ch in self.data:
-                        new_states.append((self.data[ch], i))
-                    states = new_states
-                for state, start in states:
-                    if None in state:
-                        results.append((state[None], start, len(text)))
-                return results
-        _tokenization_utils.ExtensionsTrie = ExtensionsTrie
+                            results.append((state[None], start, len(text)))
+                    return results
+            _tokenization_utils.ExtensionsTrie = ExtensionsTrie
 except Exception as _e:
     if _TF_MAJOR >= 5:
         warnings.warn(f"[indextts._compat] Section 3 (tokenization_utils) failed: {_e}")

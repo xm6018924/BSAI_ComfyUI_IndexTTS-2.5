@@ -232,6 +232,22 @@ _p(
     "wetext graceful fallback",
 )
 
+# --- Fix 8: ExtensionsTrie import path (moved in transformers 5.x) -----------
+# In transformers 5.x, ExtensionsTrie was moved from tokenization_utils to
+# tokenization_python. This patch makes the import work on both versions.
+_p(
+    "gpt/transformers_generation_utils.py",
+    "from transformers.tokenization_utils import ExtensionsTrie\n",
+    (
+        "try:\n"
+        "    from transformers.tokenization_utils import ExtensionsTrie\n"
+        "except ImportError:\n"
+        "    # transformers 5.x 将 ExtensionsTrie 从 tokenization_utils 移至 tokenization_python\n"
+        "    from transformers.tokenization_python import ExtensionsTrie\n"
+    ),
+    "ExtensionsTrie import path compat",
+)
+
 
 def find_indextts_dir(explicit=None):
     if explicit:
