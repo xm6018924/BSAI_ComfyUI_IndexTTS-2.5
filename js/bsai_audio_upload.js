@@ -1,13 +1,8 @@
 /**
  * BSAI Audio Upload Extension
  *
- * Adds "加载音频" (Load Audio) and "播放音频" (Play Audio) buttons to
- * BSAI_IndexTTS2.5LoadAudio nodes.
- *
- * Features:
- *   - "加载音频" button that opens a file picker to upload audio
- *   - "播放音频" button that plays/pauses the selected audio
- *   - Auto-updates when dropdown selection changes
+ * Adds "加载音频" (Load Audio) button and an audio player bar with
+ * progress bar and time display to BSAI_IndexTTS2.5LoadAudio nodes.
  */
 
 const app = window.comfyAPI?.app?.app ?? window.app;
@@ -33,6 +28,13 @@ app.registerExtension({
     },
 });
 
+function formatTime(sec) {
+    if (!sec || isNaN(sec)) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function setupUpload(node) {
     const audioWidget = node.widgets?.find((w) => w.name === "audio_音频" || w.name === "audio");
     if (!audioWidget) return;
@@ -42,15 +44,11 @@ function setupUpload(node) {
     const wrapper = document.createElement("div");
     wrapper.style.cssText = "width: 100%; padding: 2px 0;";
 
-    // --- Button row ---
-    const btnRow = document.createElement("div");
-    btnRow.style.cssText = "display: flex; gap: 4px; width: 100%;";
-
-    // 加载音频 button
+    // --- 加载音频 button ---
     const loadBtn = document.createElement("button");
     loadBtn.textContent = "📁 加载音频";
     loadBtn.style.cssText = `
-        flex: 1; padding: 5px 8px;
+        display: block; width: 100%; padding: 5px 8px; margin-bottom: 4px;
         background: #2a2a3e; color: #88aacc; border: 1px solid #3a5a7a;
         border-radius: 4px; cursor: pointer; font-size: 12px; text-align: center;
         transition: background 0.15s;
@@ -58,22 +56,7 @@ function setupUpload(node) {
     loadBtn.onmouseenter = () => { loadBtn.style.background = "#3a3a4e"; };
     loadBtn.onmouseleave = () => { loadBtn.style.background = "#2a2a3e"; };
 
-    // 播放音频 button
-    const playBtn = document.createElement("button");
-    playBtn.textContent = "▶ 播放音频";
-    playBtn.style.cssText = `
-        flex: 1; padding: 5px 8px;
-        background: #2a3e2a; color: #aacc88; border: 1px solid #5a7a3a;
-        border-radius: 4px; cursor: pointer; font-size: 12px; text-align: center;
-        transition: background 0.15s;
-    `;
-    playBtn.onmouseenter = () => { playBtn.style.background = "#3a4e3a"; };
-    playBtn.onmouseleave = () => { playBtn.style.background = "#2a3e2a"; };
-    playBtn.disabled = true;
-    playBtn.style.opacity = "0.5";
-    playBtn.style.cursor = "not-allowed";
-
-    // Hidden file input
+    // --- Hidden file input ---
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".wav,.mp3,.flac,.ogg,.m4a";
@@ -118,48 +101,115 @@ function setupUpload(node) {
         } finally {
             loadBtn.textContent = "📁 加载音频";
             loadBtn.disabled = false;
-            loadBtn.style.opacity = "1";
             fileInput.value = "";
         }
     };
 
-    // Audio element (hidden, controlled by play button)
+    // --- Audio player bar ---
+    const playerBar = document.createElement("div");
+    playerBar.style.cssText = `
+        display: none; align-items: center; gap: 6px; width: 100%;
+        padding: 4px 6px; background: #1e1e2e; border: 1px solid #333344;
+        border-radius: 4px;
+    `;
+
+    // Play/pause button
+    const playBtn = document.createElement("button");
+    playBtn.textContent = "▶";
+    playBtn.style.cssText = `
+        flex-shrink: 0; width: 26px; height: 26px; padding: 0;
+        background: #2a4a2a; color: #aacc88; border: 1px solid #5a7a3a;
+        border-radius: 4px; cursor: pointer; font-size: 12px;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.15s;
+    `;
+    playBtn.onmouseenter = () => { playBtn.style.background = "#3a5a3a"; };
+    playBtn.onmouseleave = () => { playBtn.style.background = "#2a4a2a"; };
+
+    // Time display
+    const timeDisplay = document.createElement("span");
+    timeDisplay.textContent = "0:00 / 0:00";
+    timeDisplay.style.cssText = `
+        flex-shrink: 0; color: #aaaacc; font-size: 11px;
+        font-family: monospace; min-width: 64px; text-align: center;
+    `;
+
+    // Progress bar
+    const progressContainer = document.createElement("div");
+    progressContainer.style.cssText = `
+        flex: 1; height: 6px; background: #333344; border-radius: 3px;
+        cursor: pointer; position: relative; overflow: hidden;
+    `;
+
+    const progressFill = document.createElement("div");
+    progressFill.style.cssText = `
+        width: 0%; height: 100%; background: #5a7a9a; border-radius: 3px;
+        transition: width 0.1s linear;
+    `;
+    progressContainer.appendChild(progressFill);
+
+    // Volume icon
+    const volIcon = document.createElement("span");
+    volIcon.textContent = "🔊";
+    volIcon.style.cssText = `
+        flex-shrink: 0; font-size: 12px; cursor: pointer; opacity: 0.7;
+    `;
+    volIcon.title = "点击切换静音";
+    let muted = false;
+    volIcon.onclick = () => {
+        muted = !muted;
+        audioEl.muted = muted;
+        volIcon.textContent = muted ? "🔇" : "🔊";
+    };
+
+    // --- Audio element (hidden) ---
     const audioEl = document.createElement("audio");
     audioEl.preload = "metadata";
     audioEl.style.cssText = "display: none;";
 
+    // --- Update functions ---
     function updateAudioPreview(filename) {
         if (filename && !filename.startsWith("upload_")) {
             audioEl.src = `/api/view?filename=${encodeURIComponent(filename)}&type=input`;
-            playBtn.disabled = false;
-            playBtn.style.opacity = "1";
-            playBtn.style.cursor = "pointer";
-            playBtn.textContent = "▶ 播放音频";
+            playerBar.style.display = "flex";
         } else {
             audioEl.src = "";
             audioEl.pause();
-            playBtn.disabled = true;
-            playBtn.style.opacity = "0.5";
-            playBtn.style.cursor = "not-allowed";
-            playBtn.textContent = "▶ 播放音频";
+            playerBar.style.display = "none";
         }
     }
 
-    // Play/pause toggle
+    // --- Audio event handlers ---
     playBtn.onclick = () => {
         if (!audioEl.src) return;
         if (audioEl.paused) {
-            audioEl.play().catch(err => {
-                console.error("[BSAI] Playback error:", err);
-            });
+            audioEl.play().catch(err => console.error("[BSAI] Playback error:", err));
         } else {
             audioEl.pause();
         }
     };
 
-    audioEl.onplay = () => { playBtn.textContent = "⏸ 停止播放"; };
-    audioEl.onpause = () => { playBtn.textContent = "▶ 播放音频"; };
-    audioEl.onended = () => { playBtn.textContent = "▶ 播放音频"; };
+    audioEl.onplay = () => { playBtn.textContent = "⏸"; };
+    audioEl.onpause = () => { playBtn.textContent = "▶"; };
+    audioEl.onended = () => { playBtn.textContent = "▶"; };
+
+    audioEl.onloadedmetadata = () => {
+        timeDisplay.textContent = `0:00 / ${formatTime(audioEl.duration)}`;
+    };
+
+    audioEl.ontimeupdate = () => {
+        const pct = audioEl.duration ? (audioEl.currentTime / audioEl.duration) * 100 : 0;
+        progressFill.style.width = `${pct}%`;
+        timeDisplay.textContent = `${formatTime(audioEl.currentTime)} / ${formatTime(audioEl.duration)}`;
+    };
+
+    // Seek on progress bar click
+    progressContainer.onclick = (e) => {
+        if (!audioEl.duration) return;
+        const rect = progressContainer.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        audioEl.currentTime = pct * audioEl.duration;
+    };
 
     // Initial preview
     updateAudioPreview(audioWidget.value);
@@ -172,9 +222,14 @@ function setupUpload(node) {
         return result;
     };
 
-    btnRow.appendChild(loadBtn);
-    btnRow.appendChild(playBtn);
-    wrapper.appendChild(btnRow);
+    // --- Assemble DOM ---
+    playerBar.appendChild(playBtn);
+    playerBar.appendChild(timeDisplay);
+    playerBar.appendChild(progressContainer);
+    playerBar.appendChild(volIcon);
+
+    wrapper.appendChild(loadBtn);
+    wrapper.appendChild(playerBar);
     wrapper.appendChild(fileInput);
     wrapper.appendChild(audioEl);
 
