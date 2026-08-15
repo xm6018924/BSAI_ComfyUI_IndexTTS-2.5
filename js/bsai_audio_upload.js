@@ -23,7 +23,7 @@ app.registerExtension({
         nodeType.prototype.onNodeCreated = function () {
             onNodeCreated?.apply(this, arguments);
 
-            const audioWidget = this.widgets?.find((w) => w.name === "audio");
+            const audioWidget = this.widgets?.find((w) => w.name === "audio_音频" || w.name === "audio");
             if (!audioWidget) {
                 setTimeout(() => setupUpload(this), 0);
                 return;
@@ -34,7 +34,7 @@ app.registerExtension({
 });
 
 function setupUpload(node) {
-    const audioWidget = node.widgets?.find((w) => w.name === "audio");
+    const audioWidget = node.widgets?.find((w) => w.name === "audio_音频" || w.name === "audio");
     if (!audioWidget) return;
     if (node._bsaiUploadSetup) return;
     node._bsaiUploadSetup = true;
