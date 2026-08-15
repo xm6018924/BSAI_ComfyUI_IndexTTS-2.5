@@ -322,7 +322,7 @@
       "bgcolor": "#575",
       "inputs": [
         {
-          "name": "audio_音频",
+          "name": "audio",
           "type": "AUDIO",
           "link": 5
         }
@@ -347,7 +347,7 @@
       "bgcolor": "#665577",
       "inputs": [
         {
-          "name": "audio_音频",
+          "name": "audio",
           "type": "AUDIO",
           "link": 10
         }

@@ -1323,44 +1323,6 @@ class BSAI_IndexTTS2_5SaveAudio:
 
 
 # ===========================================================================
-#  Node 4: BSAI_IndexTTS2.5PreviewAudio
-# ===========================================================================
-class BSAI_IndexTTS2_5PreviewAudio:
-    """Preview audio with a built-in audio player widget."""
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "audio_音频": ("AUDIO",),
-            },
-        }
-
-    RETURN_TYPES = ("AUDIO",)
-    RETURN_NAMES = ("audio",)
-    FUNCTION = "preview_audio"
-    CATEGORY = "BSAI"
-    OUTPUT_NODE = True
-
-    def preview_audio(self, audio_音频):
-        waveform = audio_音频["waveform"]
-        sample_rate = audio_音频["sample_rate"]
-
-        # Save to temp directory for preview
-        temp_dir = folder_paths.get_temp_directory()
-        os.makedirs(temp_dir, exist_ok=True)
-
-        import time
-        filename = f"bsai_preview_{int(time.time() * 1000)}.wav"
-        filepath = os.path.join(temp_dir, filename)
-        _save_audio_file(filepath, waveform, sample_rate)
-
-        print(f"[BSAI_IndexTTS2.5] Preview audio: {filepath}")
-        return {"ui": {"audio": [{"filename": filename, "subfolder": "", "type": "temp"}]},
-                "result": (audio,)}
-
-
-# ===========================================================================
 #  Node 5: BSAI_IndexTTS2.5UnloadModel
 # ===========================================================================
 class BSAI_IndexTTS2_5UnloadModel:
@@ -1394,7 +1356,6 @@ NODE_CLASS_MAPPINGS = {
     "BSAI_IndexTTS2.5Synthesis": BSAI_IndexTTS2_5Synthesis,
     "BSAI_IndexTTS2.5EmotionVector": BSAI_IndexTTS2_5EmotionVector,
     "BSAI_IndexTTS2.5SaveAudio": BSAI_IndexTTS2_5SaveAudio,
-    "BSAI_IndexTTS2.5PreviewAudio": BSAI_IndexTTS2_5PreviewAudio,
     "BSAI_IndexTTS2.5UnloadModel": BSAI_IndexTTS2_5UnloadModel,
 }
 
@@ -1404,6 +1365,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "BSAI_IndexTTS2.5Synthesis": "BSAI IndexTTS2.5 Synthesis",
     "BSAI_IndexTTS2.5EmotionVector": "BSAI IndexTTS2.5 Emotion Vector",
     "BSAI_IndexTTS2.5SaveAudio": "BSAI IndexTTS2.5 Save Audio",
-    "BSAI_IndexTTS2.5PreviewAudio": "BSAI IndexTTS2.5 Preview Audio",
     "BSAI_IndexTTS2.5UnloadModel": "BSAI IndexTTS2.5 Unload Model",
 }

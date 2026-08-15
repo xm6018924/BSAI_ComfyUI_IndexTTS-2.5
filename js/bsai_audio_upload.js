@@ -3,13 +3,12 @@ import { app } from "../../scripts/app.js";
 /**
  * BSAI Audio Upload Extension
  *
- * Adds a file upload button and audio preview player to BSAI_IndexTTS2.5LoadAudio
- * nodes. ComfyUI's built-in upload widget only works for the core LoadAudio node
- * type, so we add our own for the BSAI custom node.
+ * Adds "加载音频" (Load Audio) and "播放音频" (Play Audio) buttons to
+ * BSAI_IndexTTS2.5LoadAudio nodes.
  *
  * Features:
- *   - "Choose File" button that opens a file picker
- *   - Audio player with play/pause and timeline
+ *   - "加载音频" button that opens a file picker to upload audio
+ *   - "播放音频" button that plays/pauses the selected audio
  *   - Auto-updates when dropdown selection changes
  */
 
@@ -25,10 +24,8 @@ app.registerExtension({
         nodeType.prototype.onNodeCreated = function () {
             onNodeCreated?.apply(this, arguments);
 
-            // Wait for widgets to be initialized
             const audioWidget = this.widgets?.find((w) => w.name === "audio");
             if (!audioWidget) {
-                // Retry after a tick if widgets aren't ready yet
                 setTimeout(() => setupUpload(this), 0);
                 return;
             }
@@ -40,24 +37,42 @@ app.registerExtension({
 function setupUpload(node) {
     const audioWidget = node.widgets?.find((w) => w.name === "audio");
     if (!audioWidget) return;
-    if (node._bsaiUploadSetup) return; // Prevent double-setup
+    if (node._bsaiUploadSetup) return;
     node._bsaiUploadSetup = true;
 
-    // --- Build DOM container ---
     const wrapper = document.createElement("div");
     wrapper.style.cssText = "width: 100%; padding: 2px 0;";
 
-    // Upload button
-    const uploadBtn = document.createElement("button");
-    uploadBtn.textContent = "📁 Choose Audio File";
-    uploadBtn.style.cssText = `
-        display: block; width: 100%; padding: 5px 8px; margin-bottom: 4px;
+    // --- Button row ---
+    const btnRow = document.createElement("div");
+    btnRow.style.cssText = "display: flex; gap: 4px; width: 100%;";
+
+    // 加载音频 button
+    const loadBtn = document.createElement("button");
+    loadBtn.textContent = "📁 加载音频";
+    loadBtn.style.cssText = `
+        flex: 1; padding: 5px 8px;
         background: #2a2a3e; color: #88aacc; border: 1px solid #3a5a7a;
         border-radius: 4px; cursor: pointer; font-size: 12px; text-align: center;
         transition: background 0.15s;
     `;
-    uploadBtn.onmouseenter = () => { uploadBtn.style.background = "#3a3a4e"; };
-    uploadBtn.onmouseleave = () => { uploadBtn.style.background = "#2a2a3e"; };
+    loadBtn.onmouseenter = () => { loadBtn.style.background = "#3a3a4e"; };
+    loadBtn.onmouseleave = () => { loadBtn.style.background = "#2a2a3e"; };
+
+    // 播放音频 button
+    const playBtn = document.createElement("button");
+    playBtn.textContent = "▶ 播放音频";
+    playBtn.style.cssText = `
+        flex: 1; padding: 5px 8px;
+        background: #2a3e2a; color: #aacc88; border: 1px solid #5a7a3a;
+        border-radius: 4px; cursor: pointer; font-size: 12px; text-align: center;
+        transition: background 0.15s;
+    `;
+    playBtn.onmouseenter = () => { playBtn.style.background = "#3a4e3a"; };
+    playBtn.onmouseleave = () => { playBtn.style.background = "#2a3e2a"; };
+    playBtn.disabled = true;
+    playBtn.style.opacity = "0.5";
+    playBtn.style.cursor = "not-allowed";
 
     // Hidden file input
     const fileInput = document.createElement("input");
@@ -65,14 +80,14 @@ function setupUpload(node) {
     fileInput.accept = ".wav,.mp3,.flac,.ogg,.m4a";
     fileInput.style.display = "none";
 
-    uploadBtn.onclick = () => fileInput.click();
+    loadBtn.onclick = () => fileInput.click();
 
     fileInput.onchange = async () => {
         const file = fileInput.files[0];
         if (!file) return;
 
-        uploadBtn.textContent = "⏳ Uploading...";
-        uploadBtn.disabled = true;
+        loadBtn.textContent = "⏳ 加载中...";
+        loadBtn.disabled = true;
 
         try {
             const formData = new FormData();
@@ -90,7 +105,6 @@ function setupUpload(node) {
             const data = await resp.json();
             audioWidget.value = data.name;
 
-            // Refresh the dropdown options if needed
             if (audioWidget.options && Array.isArray(audioWidget.options.values)) {
                 if (!audioWidget.options.values.includes(data.name)) {
                     audioWidget.options.values.push(data.name);
@@ -99,35 +113,54 @@ function setupUpload(node) {
             }
 
             updateAudioPreview(data.name);
-            uploadBtn.textContent = "📁 Choose Audio File";
         } catch (err) {
             console.error("[BSAI] Upload error:", err);
-            alert(`Upload failed: ${err.message}`);
-            uploadBtn.textContent = "📁 Choose Audio File";
+            alert(`加载失败: ${err.message}`);
         } finally {
-            uploadBtn.disabled = false;
+            loadBtn.textContent = "📁 加载音频";
+            loadBtn.disabled = false;
+            loadBtn.style.opacity = "1";
             fileInput.value = "";
         }
     };
 
-    // Audio preview element
+    // Audio element (hidden, controlled by play button)
     const audioEl = document.createElement("audio");
-    audioEl.controls = true;
     audioEl.preload = "metadata";
-    audioEl.style.cssText = `
-        display: none; width: 100%; margin-top: 2px;
-        border-radius: 4px; height: 32px;
-    `;
+    audioEl.style.cssText = "display: none;";
 
     function updateAudioPreview(filename) {
         if (filename && !filename.startsWith("upload_")) {
             audioEl.src = `/api/view?filename=${encodeURIComponent(filename)}&type=input`;
-            audioEl.style.display = "block";
+            playBtn.disabled = false;
+            playBtn.style.opacity = "1";
+            playBtn.style.cursor = "pointer";
+            playBtn.textContent = "▶ 播放音频";
         } else {
             audioEl.src = "";
-            audioEl.style.display = "none";
+            audioEl.pause();
+            playBtn.disabled = true;
+            playBtn.style.opacity = "0.5";
+            playBtn.style.cursor = "not-allowed";
+            playBtn.textContent = "▶ 播放音频";
         }
     }
+
+    // Play/pause toggle
+    playBtn.onclick = () => {
+        if (!audioEl.src) return;
+        if (audioEl.paused) {
+            audioEl.play().catch(err => {
+                console.error("[BSAI] Playback error:", err);
+            });
+        } else {
+            audioEl.pause();
+        }
+    };
+
+    audioEl.onplay = () => { playBtn.textContent = "⏸ 停止播放"; };
+    audioEl.onpause = () => { playBtn.textContent = "▶ 播放音频"; };
+    audioEl.onended = () => { playBtn.textContent = "▶ 播放音频"; };
 
     // Initial preview
     updateAudioPreview(audioWidget.value);
@@ -140,18 +173,18 @@ function setupUpload(node) {
         return result;
     };
 
-    wrapper.appendChild(uploadBtn);
+    btnRow.appendChild(loadBtn);
+    btnRow.appendChild(playBtn);
+    wrapper.appendChild(btnRow);
     wrapper.appendChild(fileInput);
     wrapper.appendChild(audioEl);
 
-    // --- Add as DOM widget to the node ---
     if (typeof node.addDOMWidget === "function") {
         node.addDOMWidget("bsai_upload", "button", wrapper, {
             getValue: () => audioWidget.value,
             setValue: (v) => { audioWidget.value = v; updateAudioPreview(v); },
         });
     } else {
-        // Fallback: append to node's DOM element directly
         const checkAndAppend = () => {
             const el = node.element || node.dom;
             if (el) {
