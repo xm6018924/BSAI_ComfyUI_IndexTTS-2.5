@@ -840,10 +840,9 @@ class BSAI_IndexTTS2_5LoadAudio:
 
     @classmethod
     def VALIDATE_INPUTS(cls, audio):
-        if not audio or audio.startswith("upload_"):
-            return "Please upload or select an audio file."
-        if not folder_paths.exists_annotated_filepath(audio):
-            return f"Audio file not found: {audio}"
+        # Don't reject placeholder filenames during validation — users will
+        # upload their own files before executing. File existence is checked
+        # at execution time in load_audio() with a clear error message.
         return True
 
     @classmethod
