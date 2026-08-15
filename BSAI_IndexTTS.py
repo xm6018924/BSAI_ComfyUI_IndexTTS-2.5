@@ -1213,16 +1213,16 @@ class BSAI_IndexTTS2_5EmotionVector:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "happy": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "angry": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "sad": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "fear": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "disgust": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "melancholy": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "surprise": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "calm": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "preset": (["none", "happy", "angry", "sad", "fear", "disgust",
-                            "melancholy", "surprise", "calm"], {"default": "none"}),
+                "happy_开心": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "angry_愤怒": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "sad_悲伤": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "fear_恐惧": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "disgust_厌恶": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "melancholy_忧郁": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "surprise_惊讶": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "calm_平静": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "preset": (["none 无", "happy 开心", "angry 愤怒", "sad 悲伤", "fear 恐惧", "disgust 厌恶",
+                            "melancholy 忧郁", "surprise 惊讶", "calm 平静"], {"default": "none 无"}),
             },
         }
 
@@ -1231,24 +1231,24 @@ class BSAI_IndexTTS2_5EmotionVector:
     FUNCTION = "build_vector"
     CATEGORY = "BSAI"
 
-    def build_vector(self, happy, angry, sad, fear, disgust, melancholy, surprise, calm, preset="none"):
+    def build_vector(self, happy_开心, angry_愤怒, sad_悲伤, fear_恐惧, disgust_厌恶, melancholy_忧郁, surprise_惊讶, calm_平静, preset="none 无"):
         # Apply preset if selected (overrides individual values)
         presets = {
-            "happy":      [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            "angry":      [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            "sad":        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            "fear":       [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-            "disgust":    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
-            "melancholy": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
-            "surprise":   [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
-            "calm":       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+            "happy 开心":      [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "angry 愤怒":      [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "sad 悲伤":        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "fear 恐惧":       [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            "disgust 厌恶":    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            "melancholy 忧郁": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            "surprise 惊讶":   [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+            "calm 平静":       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
         }
 
-        if preset != "none" and preset in presets:
+        if preset != "none 无" and preset in presets:
             vec = presets[preset]
             print(f"[BSAI_IndexTTS2.5] Emotion vector preset: {preset} -> {vec}")
         else:
-            vec = [happy, angry, sad, fear, disgust, melancholy, surprise, calm]
+            vec = [happy_开心, angry_愤怒, sad_悲伤, fear_恐惧, disgust_厌恶, melancholy_忧郁, surprise_惊讶, calm_平静]
             print(f"[BSAI_IndexTTS2.5] Emotion vector: {vec}")
 
         return (vec,)
