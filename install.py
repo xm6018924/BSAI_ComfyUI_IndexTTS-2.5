@@ -224,6 +224,16 @@ def main():
         "munch": "munch",
         "textstat": "textstat",
         "openai_whisper": "openai-whisper",
+        "omegaconf": "omegaconf",
+        "einops": "einops",
+        "librosa": "librosa",
+        "jieba": "jieba",
+        "modelscope": "modelscope",
+        "numba": "numba",
+        "accelerate": "accelerate",
+        "safetensors": "safetensors",
+        "sentencepiece": "sentencepiece",
+        "tqdm": "tqdm",
     }
     for import_name, pip_name in dep_check.items():
         if not check_package_installed(import_name):

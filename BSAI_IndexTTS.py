@@ -676,6 +676,28 @@ def _get_indextts(use_bf16=True, device=None, use_qwen_emo=False):
         # Re-apply librosa numba compat patch after install
         _patch_librosa_numba_compat()
 
+        # Belt-and-suspenders: ensure critical dependencies are installed
+        # even if install.py missed them (e.g., omegaconf, einops, etc.)
+        _critical_deps = {
+            "omegaconf": "omegaconf",
+            "einops": "einops",
+            "librosa": "librosa",
+            "jieba": "jieba",
+            "modelscope": "modelscope",
+        }
+        _missing_critical = []
+        for _imp_name, _pip_name in _critical_deps.items():
+            try:
+                __import__(_imp_name)
+            except ImportError:
+                _missing_critical.append(_pip_name)
+        if _missing_critical:
+            print(f"[BSAI_IndexTTS2.5] Installing critical missing deps: {_missing_critical}")
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install"] + _missing_critical,
+                capture_output=True, text=True, check=False,
+            )
+
         # Try importing again
         try:
             from indextts.infer_v2_5 import IndexTTS2
