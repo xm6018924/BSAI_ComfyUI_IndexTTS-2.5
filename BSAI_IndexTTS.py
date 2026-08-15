@@ -889,7 +889,20 @@ class BSAI_IndexTTS2_5LoadAudio:
             input_dir = folder_paths.get_input_directory()
             audio_path = os.path.join(input_dir, audio)
             if not os.path.isfile(audio_path):
-                raise FileNotFoundError(f"Audio file not found: {audio}")
+                # Generate a silent placeholder so the workflow can execute
+                # without crashing. The user will see a warning and should
+                # upload their own reference audio for proper voice cloning.
+                print(f"[BSAI_IndexTTS2.5] WARNING: Audio file '{audio}' not found. "
+                      f"Using a 3-second silent placeholder. "
+                      f"Please upload your own audio file for voice cloning.")
+                sample_rate = 22050
+                duration = 3
+                waveform = torch.zeros(1, duration * sample_rate)
+                audio_dict = {
+                    "waveform": waveform.unsqueeze(0),
+                    "sample_rate": sample_rate,
+                }
+                return (audio_dict,)
 
         print(f"[BSAI_IndexTTS2.5] Loading audio: {audio_path}")
 
