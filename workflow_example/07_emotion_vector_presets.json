@@ -69,7 +69,7 @@
         0,
         0,
         0,
-        "happy"
+        "happy 开心"
       ],
       "color": "#363",
       "bgcolor": "#575",
@@ -98,7 +98,7 @@
         0,
         0,
         0,
-        "angry"
+        "angry 愤怒"
       ],
       "color": "#633",
       "bgcolor": "#844",
@@ -142,33 +142,33 @@
       "title": "Happy Emotion Synthesis",
       "inputs": [
         {
-          "name": "tts_model",
+          "name": "tts_model_TTS模型",
           "type": "INDEX_TTS_MODEL",
           "link": 1
         },
         {
-          "name": "text",
+          "name": "text_文本",
           "type": "STRING",
           "widget": {
-            "name": "text"
+            "name": "text_文本"
           },
           "link": null
         },
         {
-          "name": "reference_audio",
+          "name": "reference_audio_参考音频",
           "type": "AUDIO",
           "link": 2
         },
         {
-          "name": "lang",
+          "name": "lang_语言",
           "type": "COMBO",
           "widget": {
-            "name": "lang"
+            "name": "lang_语言"
           },
           "link": null
         },
         {
-          "name": "emo_vector",
+          "name": "emo_vector_情绪向量",
           "type": "EMO_VECTOR",
           "link": 3
         }
@@ -212,33 +212,33 @@
       "title": "Angry Emotion Synthesis",
       "inputs": [
         {
-          "name": "tts_model",
+          "name": "tts_model_TTS模型",
           "type": "INDEX_TTS_MODEL",
           "link": 6
         },
         {
-          "name": "text",
+          "name": "text_文本",
           "type": "STRING",
           "widget": {
-            "name": "text"
+            "name": "text_文本"
           },
           "link": null
         },
         {
-          "name": "reference_audio",
+          "name": "reference_audio_参考音频",
           "type": "AUDIO",
           "link": 7
         },
         {
-          "name": "lang",
+          "name": "lang_语言",
           "type": "COMBO",
           "widget": {
-            "name": "lang"
+            "name": "lang_语言"
           },
           "link": null
         },
         {
-          "name": "emo_vector",
+          "name": "emo_vector_情绪向量",
           "type": "EMO_VECTOR",
           "link": 8
         }
@@ -268,7 +268,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 4
         }
@@ -298,7 +298,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 9
         }
@@ -322,7 +322,7 @@
       "bgcolor": "#575",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 5
         }
@@ -347,7 +347,7 @@
       "bgcolor": "#665577",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 10
         }

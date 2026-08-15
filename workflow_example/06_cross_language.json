@@ -84,28 +84,28 @@
       "title": "ZH voice -> EN text",
       "inputs": [
         {
-          "name": "tts_model",
+          "name": "tts_model_TTS模型",
           "type": "INDEX_TTS_MODEL",
           "link": 1
         },
         {
-          "name": "text",
+          "name": "text_文本",
           "type": "STRING",
           "widget": {
-            "name": "text"
+            "name": "text_文本"
           },
           "link": null
         },
         {
-          "name": "reference_audio",
+          "name": "reference_audio_参考音频",
           "type": "AUDIO",
           "link": 2
         },
         {
-          "name": "lang",
+          "name": "lang_语言",
           "type": "COMBO",
           "widget": {
-            "name": "lang"
+            "name": "lang_语言"
           },
           "link": null
         }
@@ -149,28 +149,28 @@
       "title": "ZH voice -> JA text",
       "inputs": [
         {
-          "name": "tts_model",
+          "name": "tts_model_TTS模型",
           "type": "INDEX_TTS_MODEL",
           "link": 5
         },
         {
-          "name": "text",
+          "name": "text_文本",
           "type": "STRING",
           "widget": {
-            "name": "text"
+            "name": "text_文本"
           },
           "link": null
         },
         {
-          "name": "reference_audio",
+          "name": "reference_audio_参考音频",
           "type": "AUDIO",
           "link": 6
         },
         {
-          "name": "lang",
+          "name": "lang_语言",
           "type": "COMBO",
           "widget": {
-            "name": "lang"
+            "name": "lang_语言"
           },
           "link": null
         }
@@ -214,28 +214,28 @@
       "title": "ZH voice -> ES text",
       "inputs": [
         {
-          "name": "tts_model",
+          "name": "tts_model_TTS模型",
           "type": "INDEX_TTS_MODEL",
           "link": 9
         },
         {
-          "name": "text",
+          "name": "text_文本",
           "type": "STRING",
           "widget": {
-            "name": "text"
+            "name": "text_文本"
           },
           "link": null
         },
         {
-          "name": "reference_audio",
+          "name": "reference_audio_参考音频",
           "type": "AUDIO",
           "link": 10
         },
         {
-          "name": "lang",
+          "name": "lang_语言",
           "type": "COMBO",
           "widget": {
-            "name": "lang"
+            "name": "lang_语言"
           },
           "link": null
         }
@@ -265,7 +265,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 3
         }
@@ -295,7 +295,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 7
         }
@@ -325,7 +325,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 11
         }
@@ -349,7 +349,7 @@
       "bgcolor": "#665577",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 4
         }
@@ -374,7 +374,7 @@
       "bgcolor": "#665577",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 8
         }
@@ -399,7 +399,7 @@
       "bgcolor": "#665577",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 12
         }

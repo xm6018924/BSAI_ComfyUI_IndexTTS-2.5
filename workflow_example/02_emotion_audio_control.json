@@ -104,33 +104,33 @@
       "bgcolor": "#4F0074",
       "inputs": [
         {
-          "name": "tts_model",
+          "name": "tts_model_TTS模型",
           "type": "INDEX_TTS_MODEL",
           "link": 2
         },
         {
-          "name": "text",
+          "name": "text_文本",
           "type": "STRING",
           "widget": {
-            "name": "text"
+            "name": "text_文本"
           },
           "link": null
         },
         {
-          "name": "reference_audio",
+          "name": "reference_audio_参考音频",
           "type": "AUDIO",
           "link": 3
         },
         {
-          "name": "lang",
+          "name": "lang_语言",
           "type": "COMBO",
           "widget": {
-            "name": "lang"
+            "name": "lang_语言"
           },
           "link": null
         },
         {
-          "name": "emo_audio_prompt",
+          "name": "emo_audio_prompt_情绪参考音频",
           "type": "AUDIO",
           "link": 1
         }
@@ -160,7 +160,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 4
         }
@@ -184,7 +184,7 @@
       "bgcolor": "#665577",
       "inputs": [
         {
-          "name": "audio",
+          "name": "audio_音频",
           "type": "AUDIO",
           "link": 5
         }
