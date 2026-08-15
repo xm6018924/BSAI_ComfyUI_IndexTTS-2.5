@@ -1,5 +1,3 @@
-import { app } from "../../scripts/app.js";
-
 /**
  * BSAI Audio Upload Extension
  *
@@ -12,12 +10,13 @@ import { app } from "../../scripts/app.js";
  *   - Auto-updates when dropdown selection changes
  */
 
+const app = window.comfyAPI?.app?.app ?? window.app;
 const NODE_TYPE = "BSAI_IndexTTS2.5LoadAudio";
 
 app.registerExtension({
     name: "BSAI.IndexTTS2.5.AudioUpload",
 
-    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+    async beforeRegisterNodeDef(nodeType, nodeData) {
         if (nodeData.name !== NODE_TYPE) return;
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
