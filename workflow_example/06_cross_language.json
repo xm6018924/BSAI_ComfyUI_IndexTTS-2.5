@@ -82,7 +82,34 @@
       "color": "#16727c",
       "bgcolor": "#4F0074",
       "title": "ZH voice -> EN text",
-      "inputs": []
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 2
+        },
+        {
+          "name": "lang",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang"
+          },
+          "link": null
+        }
+      ]
     },
     {
       "id": 6,
@@ -120,7 +147,34 @@
       "color": "#16727c",
       "bgcolor": "#4F0074",
       "title": "ZH voice -> JA text",
-      "inputs": []
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 5
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 6
+        },
+        {
+          "name": "lang",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang"
+          },
+          "link": null
+        }
+      ]
     },
     {
       "id": 9,
@@ -158,7 +212,34 @@
       "color": "#16727c",
       "bgcolor": "#4F0074",
       "title": "ZH voice -> ES text",
-      "inputs": []
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 9
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 10
+        },
+        {
+          "name": "lang",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang"
+          },
+          "link": null
+        }
+      ]
     },
     {
       "id": 4,

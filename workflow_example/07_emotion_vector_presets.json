@@ -140,7 +140,39 @@
       "color": "#363",
       "bgcolor": "#575",
       "title": "Happy Emotion Synthesis",
-      "inputs": []
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 2
+        },
+        {
+          "name": "lang",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang"
+          },
+          "link": null
+        },
+        {
+          "name": "emo_vector",
+          "type": "EMO_VECTOR",
+          "link": 3
+        }
+      ]
     },
     {
       "id": 8,
@@ -178,7 +210,39 @@
       "color": "#16727c",
       "bgcolor": "#4F0074",
       "title": "Angry Emotion Synthesis",
-      "inputs": []
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 6
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 7
+        },
+        {
+          "name": "lang",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang"
+          },
+          "link": null
+        },
+        {
+          "name": "emo_vector",
+          "type": "EMO_VECTOR",
+          "link": 8
+        }
+      ]
     },
     {
       "id": 5,

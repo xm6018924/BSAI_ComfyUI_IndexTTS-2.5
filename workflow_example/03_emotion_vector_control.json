@@ -110,7 +110,39 @@
       ],
       "color": "#16727c",
       "bgcolor": "#4F0074",
-      "inputs": []
+      "inputs": [
+        {
+          "name": "tts_model",
+          "type": "INDEX_TTS_MODEL",
+          "link": 2
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio",
+          "type": "AUDIO",
+          "link": 3
+        },
+        {
+          "name": "lang",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang"
+          },
+          "link": null
+        },
+        {
+          "name": "emo_vector",
+          "type": "EMO_VECTOR",
+          "link": 1
+        }
+      ]
     },
     {
       "id": 5,
