@@ -252,7 +252,7 @@
     },
     {
       "id": 5,
-      "type": "BSAI_IndexTTS2.5PreviewAudio",
+      "type": "PreviewAudio",
       "pos": [
         850,
         200
@@ -273,11 +273,11 @@
           "link": 4
         }
       ],
-      "title": "Preview EN"
+      "title": "预览音频-英语"
     },
     {
       "id": 8,
-      "type": "BSAI_IndexTTS2.5PreviewAudio",
+      "type": "PreviewAudio",
       "pos": [
         850,
         600
@@ -298,11 +298,11 @@
           "link": 8
         }
       ],
-      "title": "Preview JA"
+      "title": "预览音频-日语"
     },
     {
       "id": 11,
-      "type": "BSAI_IndexTTS2.5PreviewAudio",
+      "type": "PreviewAudio",
       "pos": [
         850,
         1000
@@ -323,7 +323,7 @@
           "link": 12
         }
       ],
-      "title": "Preview ES"
+      "title": "预览音频-西语"
     }
   ],
   "links": [

@@ -136,7 +136,7 @@
     },
     {
       "id": 6,
-      "type": "BSAI_IndexTTS2.5PreviewAudio",
+      "type": "PreviewAudio",
       "pos": [
         850,
         250
@@ -157,7 +157,7 @@
           "link": 5
         }
       ],
-      "title": "Preview"
+      "title": "预览音频"
     }
   ],
   "links": [

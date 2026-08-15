@@ -242,7 +242,7 @@
     },
     {
       "id": 6,
-      "type": "BSAI_IndexTTS2.5PreviewAudio",
+      "type": "PreviewAudio",
       "pos": [
         850,
         200
@@ -263,11 +263,11 @@
           "link": 5
         }
       ],
-      "title": "Preview Happy"
+      "title": "预览音频-开心"
     },
     {
       "id": 10,
-      "type": "BSAI_IndexTTS2.5PreviewAudio",
+      "type": "PreviewAudio",
       "pos": [
         850,
         800
@@ -288,7 +288,7 @@
           "link": 10
         }
       ],
-      "title": "Preview Angry"
+      "title": "预览音频-愤怒"
     }
   ],
   "links": [
