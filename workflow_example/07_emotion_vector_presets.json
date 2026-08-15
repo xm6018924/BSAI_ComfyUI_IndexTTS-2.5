@@ -1,6 +1,6 @@
 {
-  "last_node_id": 9,
-  "last_link_id": 8,
+  "last_node_id": 10,
+  "last_link_id": 10,
   "nodes": [
     {
       "id": 1,
@@ -34,7 +34,7 @@
       ],
       "size": [
         320,
-        80
+        100
       ],
       "flags": {},
       "order": 2,
@@ -47,7 +47,7 @@
       "title": "Speaker Voice"
     },
     {
-      "id": 6,
+      "id": 3,
       "type": "BSAI_IndexTTS2.5EmotionVector",
       "pos": [
         0,
@@ -58,7 +58,7 @@
         320
       ],
       "flags": {},
-      "order": 6,
+      "order": 3,
       "mode": 0,
       "widgets_values": [
         0,
@@ -105,7 +105,7 @@
       "title": "Angry Preset"
     },
     {
-      "id": 3,
+      "id": 4,
       "type": "BSAI_IndexTTS2.5Synthesis",
       "pos": [
         400,
@@ -116,7 +116,7 @@
         550
       ],
       "flags": {},
-      "order": 3,
+      "order": 4,
       "mode": 0,
       "widgets_values": [
         "哈哈哈，今天天气真好啊！我开心得都想唱歌了！",
@@ -140,23 +140,7 @@
       "color": "#363",
       "bgcolor": "#575",
       "title": "Happy Emotion Synthesis",
-      "inputs": [
-        {
-          "name": "tts_model",
-          "type": "INDEX_TTS_MODEL",
-          "link": 1
-        },
-        {
-          "name": "reference_audio",
-          "type": "AUDIO",
-          "link": 2
-        },
-        {
-          "name": "emo_vector",
-          "type": "EMO_VECTOR",
-          "link": 5
-        }
-      ]
+      "inputs": []
     },
     {
       "id": 8,
@@ -194,26 +178,10 @@
       "color": "#16727c",
       "bgcolor": "#4F0074",
       "title": "Angry Emotion Synthesis",
-      "inputs": [
-        {
-          "name": "tts_model",
-          "type": "INDEX_TTS_MODEL",
-          "link": 3
-        },
-        {
-          "name": "reference_audio",
-          "type": "AUDIO",
-          "link": 4
-        },
-        {
-          "name": "emo_vector",
-          "type": "EMO_VECTOR",
-          "link": 6
-        }
-      ]
+      "inputs": []
     },
     {
-      "id": 4,
+      "id": 5,
       "type": "BSAI_IndexTTS2.5SaveAudio",
       "pos": [
         850,
@@ -224,7 +192,7 @@
         130
       ],
       "flags": {},
-      "order": 4,
+      "order": 5,
       "mode": 0,
       "widgets_values": [
         "BSAI_IndexTTS2_5_happy",
@@ -238,7 +206,7 @@
         {
           "name": "audio",
           "type": "AUDIO",
-          "link": 7
+          "link": 4
         }
       ]
     },
@@ -247,7 +215,7 @@
       "type": "BSAI_IndexTTS2.5SaveAudio",
       "pos": [
         850,
-        200
+        600
       ],
       "size": [
         320,
@@ -268,9 +236,59 @@
         {
           "name": "audio",
           "type": "AUDIO",
-          "link": 8
+          "link": 9
         }
       ]
+    },
+    {
+      "id": 6,
+      "type": "BSAI_IndexTTS2.5PreviewAudio",
+      "pos": [
+        850,
+        200
+      ],
+      "size": [
+        320,
+        80
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "color": "#363",
+      "bgcolor": "#575",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 5
+        }
+      ],
+      "title": "Preview Happy"
+    },
+    {
+      "id": 10,
+      "type": "BSAI_IndexTTS2.5PreviewAudio",
+      "pos": [
+        850,
+        800
+      ],
+      "size": [
+        320,
+        80
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "color": "#432266",
+      "bgcolor": "#665577",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 10
+        }
+      ],
+      "title": "Preview Angry"
     }
   ],
   "links": [
@@ -278,7 +296,7 @@
       1,
       1,
       0,
-      3,
+      4,
       0,
       "INDEX_TTS_MODEL"
     ],
@@ -286,12 +304,36 @@
       2,
       2,
       0,
-      3,
+      4,
       2,
       "AUDIO"
     ],
     [
       3,
+      3,
+      0,
+      4,
+      4,
+      "EMO_VECTOR"
+    ],
+    [
+      4,
+      4,
+      0,
+      5,
+      0,
+      "AUDIO"
+    ],
+    [
+      5,
+      5,
+      1,
+      6,
+      0,
+      "AUDIO"
+    ],
+    [
+      6,
       1,
       0,
       8,
@@ -299,7 +341,7 @@
       "INDEX_TTS_MODEL"
     ],
     [
-      4,
+      7,
       2,
       0,
       8,
@@ -307,15 +349,7 @@
       "AUDIO"
     ],
     [
-      5,
-      6,
-      0,
-      3,
-      4,
-      "EMO_VECTOR"
-    ],
-    [
-      6,
+      8,
       7,
       0,
       8,
@@ -323,18 +357,18 @@
       "EMO_VECTOR"
     ],
     [
-      7,
-      3,
-      0,
-      4,
-      0,
-      "AUDIO"
-    ],
-    [
-      8,
+      9,
       8,
       0,
       9,
+      0,
+      "AUDIO"
+    ],
+    [
+      10,
+      9,
+      1,
+      10,
       0,
       "AUDIO"
     ]
