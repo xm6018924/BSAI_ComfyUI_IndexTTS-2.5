@@ -546,13 +546,150 @@ def _patch_librosa_numba_compat():
         print(f"[BSAI_IndexTTS2.5] Warning: could not patch librosa.zero_crossings: {e}")
 
 
+# ---------------------------------------------------------------------------
+#  Isolated venv support: run indextts in a separate Python process with
+#  old transformers/accelerate/tokenizers to avoid conflicts with nunchaku.
+# ---------------------------------------------------------------------------
+_VENV_PYTHON = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+    "python_envs", "indextts_env", "Scripts", "python.exe"
+)
+
+_BRIDGE_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "indextts_bridge.py")
+
+
+class IndexTTSBridge:
+    """Wrapper that communicates with the indextts bridge subprocess."""
+
+    def __init__(self, proc):
+        self._proc = proc
+
+    def _send(self, msg):
+        self._proc.stdin.write(json.dumps(msg, ensure_ascii=False) + "\n")
+        self._proc.stdin.flush()
+
+    def _recv(self):
+        line = self._proc.stdout.readline()
+        if not line:
+            raise RuntimeError("Bridge process closed unexpectedly")
+        return json.loads(line)
+
+    def infer(self, **kwargs):
+        msg = {"cmd": "synthesize"}
+        msg.update(kwargs)
+        self._send(msg)
+        resp = self._recv()
+        if resp.get("status") != "ok":
+            raise RuntimeError(resp.get("msg", "Unknown bridge error"))
+        return resp.get("output")
+
+    def close(self):
+        try:
+            self._send({"cmd": "unload"})
+            self._recv()
+        except Exception:
+            pass
+        try:
+            self._proc.terminate()
+            self._proc.wait(timeout=10)
+        except Exception:
+            try:
+                self._proc.kill()
+            except Exception:
+                pass
+
+    def is_alive(self):
+        return self._proc.poll() is None
+
+
+def _get_venv_python():
+    """Return the venv python path if the venv exists and is usable."""
+    if os.path.isfile(_VENV_PYTHON) and os.path.isfile(_BRIDGE_SCRIPT):
+        return _VENV_PYTHON
+    return None
+
+
+def _start_bridge(use_bf16, device, use_qwen_emo):
+    """Start the bridge subprocess in the isolated venv."""
+    model_dir = ensure_model_available()
+    if model_dir is None:
+        raise RuntimeError("IndexTTS-2.5 model not available.")
+    cfg_path = get_config_path(model_dir)
+    if not os.path.exists(cfg_path):
+        raise FileNotFoundError(f"Config file not found: {cfg_path}")
+
+    venv_python = _get_venv_python()
+    print(f"[BSAI_IndexTTS2.5] Using isolated venv: {venv_python}")
+    print(f"[BSAI_IndexTTS2.5] Bridge script: {_BRIDGE_SCRIPT}")
+
+    import subprocess
+    proc = subprocess.Popen(
+        [venv_python, _BRIDGE_SCRIPT],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        cwd=os.path.dirname(_BRIDGE_SCRIPT),
+    )
+
+    # Send load command
+    load_msg = {
+        "cmd": "load",
+        "cfg_path": cfg_path,
+        "model_dir": model_dir,
+        "use_bf16": use_bf16,
+        "device": device,
+        "use_qwen_emo": use_qwen_emo,
+    }
+    proc.stdin.write(json.dumps(load_msg, ensure_ascii=False) + "\n")
+    proc.stdin.flush()
+
+    # Read stderr in a thread to avoid blocking
+    import threading
+    stderr_lines = []
+    def _read_stderr():
+        for line in proc.stderr:
+            stderr_lines.append(line)
+            print(f"[IndexTTS-Bridge] {line.rstrip()}")
+    t = threading.Thread(target=_read_stderr, daemon=True)
+    t.start()
+
+    # Wait for response
+    resp_line = proc.stdout.readline()
+    if not resp_line:
+        raise RuntimeError("Bridge process closed during model load")
+    resp = json.loads(resp_line)
+    if resp.get("status") != "ok":
+        raise RuntimeError(f"Bridge load failed: {resp.get('msg', 'unknown')}\n{resp.get('tb', '')}")
+
+    print("[BSAI_IndexTTS2.5] Model loaded successfully (via bridge)!")
+    return IndexTTSBridge(proc)
+
+
 def _get_indextts(use_bf16=True, device=None, use_qwen_emo=False):
     """Get or create the IndexTTS singleton instance."""
     global _INDEXTTS_INSTANCE, _INDEXTTS_MODEL_DIR
 
     if _INDEXTTS_INSTANCE is not None:
-        return _INDEXTTS_INSTANCE
+        if isinstance(_INDEXTTS_INSTANCE, IndexTTSBridge):
+            if _INDEXTTS_INSTANCE.is_alive():
+                return _INDEXTTS_INSTANCE
+            else:
+                _INDEXTTS_INSTANCE = None
+                _INDEXTTS_MODEL_DIR = None
+        else:
+            return _INDEXTTS_INSTANCE
 
+    # --- Isolated venv path (old transformers for indextts) ---
+    if _get_venv_python() is not None:
+        print("[BSAI_IndexTTS2.5] Detected isolated venv, starting bridge subprocess...")
+        tts = _start_bridge(use_bf16=use_bf16, device=device, use_qwen_emo=use_qwen_emo)
+        _INDEXTTS_INSTANCE = tts
+        _INDEXTTS_MODEL_DIR = ensure_model_available()
+        return tts
+
+    # --- Direct import path (fallback: use main Python environment) ---
     # Ensure model is available
     model_dir = ensure_model_available()
     if model_dir is None:
@@ -731,7 +868,10 @@ def _unload_indextts():
     """Unload the IndexTTS model to free VRAM."""
     global _INDEXTTS_INSTANCE, _INDEXTTS_MODEL_DIR
     if _INDEXTTS_INSTANCE is not None:
-        del _INDEXTTS_INSTANCE
+        if isinstance(_INDEXTTS_INSTANCE, IndexTTSBridge):
+            _INDEXTTS_INSTANCE.close()
+        else:
+            del _INDEXTTS_INSTANCE
         _INDEXTTS_INSTANCE = None
         _INDEXTTS_MODEL_DIR = None
         if torch.cuda.is_available():
