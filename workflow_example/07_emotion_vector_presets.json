@@ -1,0 +1,449 @@
+{
+  "last_node_id": 10,
+  "last_link_id": 10,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "BSAI_IndexTTS2.5Loader",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        320,
+        120
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "widgets_values": [
+        true,
+        "auto",
+        false,
+        false
+      ],
+      "color": "#16727c",
+      "bgcolor": "#4F0074"
+    },
+    {
+      "id": 2,
+      "type": "BSAI_IndexTTS2.5LoadAudio",
+      "pos": [
+        0,
+        200
+      ],
+      "size": [
+        320,
+        100
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "widgets_values": [
+        "reference.wav"
+      ],
+      "color": "#226",
+      "bgcolor": "#336",
+      "title": "Speaker Voice"
+    },
+    {
+      "id": 3,
+      "type": "BSAI_IndexTTS2.5EmotionVector",
+      "pos": [
+        0,
+        380
+      ],
+      "size": [
+        320,
+        320
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "widgets_values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        "happy 开心"
+      ],
+      "color": "#363",
+      "bgcolor": "#575",
+      "title": "Happy Preset"
+    },
+    {
+      "id": 7,
+      "type": "BSAI_IndexTTS2.5EmotionVector",
+      "pos": [
+        0,
+        740
+      ],
+      "size": [
+        320,
+        320
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "widgets_values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        "angry 愤怒"
+      ],
+      "color": "#633",
+      "bgcolor": "#844",
+      "title": "Angry Preset"
+    },
+    {
+      "id": 4,
+      "type": "BSAI_IndexTTS2.5Synthesis",
+      "pos": [
+        400,
+        0
+      ],
+      "size": [
+        400,
+        550
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "widgets_values": [
+        "哈哈哈，今天天气真好啊！我开心得都想唱歌了！",
+        "ZH",
+        1.0,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
+      ],
+      "color": "#363",
+      "bgcolor": "#575",
+      "title": "Happy Emotion Synthesis",
+      "inputs": [
+        {
+          "name": "tts_model_TTS模型",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "text_文本",
+          "type": "STRING",
+          "widget": {
+            "name": "text_文本"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio_参考音频",
+          "type": "AUDIO",
+          "link": 2
+        },
+        {
+          "name": "lang_语言",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang_语言"
+          },
+          "link": null
+        },
+        {
+          "name": "emo_vector_情绪向量",
+          "type": "EMO_VECTOR",
+          "link": 3
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "BSAI_IndexTTS2.5Synthesis",
+      "pos": [
+        400,
+        600
+      ],
+      "size": [
+        400,
+        550
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "widgets_values": [
+        "你怎么又这样！每次都说同样的话，真是气死我了！",
+        "ZH",
+        1.0,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
+      ],
+      "color": "#16727c",
+      "bgcolor": "#4F0074",
+      "title": "Angry Emotion Synthesis",
+      "inputs": [
+        {
+          "name": "tts_model_TTS模型",
+          "type": "INDEX_TTS_MODEL",
+          "link": 6
+        },
+        {
+          "name": "text_文本",
+          "type": "STRING",
+          "widget": {
+            "name": "text_文本"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio_参考音频",
+          "type": "AUDIO",
+          "link": 7
+        },
+        {
+          "name": "lang_语言",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang_语言"
+          },
+          "link": null
+        },
+        {
+          "name": "emo_vector_情绪向量",
+          "type": "EMO_VECTOR",
+          "link": 8
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "BSAI_IndexTTS2.5SaveAudio",
+      "pos": [
+        850,
+        0
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_happy",
+        "wav",
+        192,
+        1.0
+      ],
+      "color": "#233",
+      "bgcolor": "#355",
+      "inputs": [
+        {
+          "name": "audio_音频",
+          "type": "AUDIO",
+          "link": 4
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "BSAI_IndexTTS2.5SaveAudio",
+      "pos": [
+        850,
+        600
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_angry",
+        "wav",
+        192,
+        1.0
+      ],
+      "color": "#233",
+      "bgcolor": "#355",
+      "inputs": [
+        {
+          "name": "audio_音频",
+          "type": "AUDIO",
+          "link": 9
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "PreviewAudio",
+      "pos": [
+        850,
+        200
+      ],
+      "size": [
+        320,
+        80
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "color": "#363",
+      "bgcolor": "#575",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 5
+        }
+      ],
+      "title": "预览音频-开心"
+    },
+    {
+      "id": 10,
+      "type": "PreviewAudio",
+      "pos": [
+        850,
+        800
+      ],
+      "size": [
+        320,
+        80
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "color": "#432266",
+      "bgcolor": "#665577",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 10
+        }
+      ],
+      "title": "预览音频-愤怒"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      4,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      4,
+      2,
+      "AUDIO"
+    ],
+    [
+      3,
+      3,
+      0,
+      4,
+      4,
+      "EMO_VECTOR"
+    ],
+    [
+      4,
+      4,
+      0,
+      5,
+      0,
+      "AUDIO"
+    ],
+    [
+      5,
+      5,
+      1,
+      6,
+      0,
+      "AUDIO"
+    ],
+    [
+      6,
+      1,
+      0,
+      8,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      7,
+      2,
+      0,
+      8,
+      2,
+      "AUDIO"
+    ],
+    [
+      8,
+      7,
+      0,
+      8,
+      4,
+      "EMO_VECTOR"
+    ],
+    [
+      9,
+      8,
+      0,
+      9,
+      0,
+      "AUDIO"
+    ],
+    [
+      10,
+      9,
+      1,
+      10,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "info": {
+      "name": "07 - Emotion Vector Presets",
+      "description": "Emotion presets: Happy vs Angry. Presets override individual sliders."
+    }
+  },
+  "version": 0.4
+}

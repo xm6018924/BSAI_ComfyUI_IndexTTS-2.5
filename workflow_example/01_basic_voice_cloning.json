@@ -1,0 +1,212 @@
+{
+  "last_node_id": 5,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "BSAI_IndexTTS2.5Loader",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        320,
+        120
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "widgets_values": [
+        true,
+        "auto",
+        false,
+        false
+      ],
+      "color": "#16727c",
+      "bgcolor": "#4F0074"
+    },
+    {
+      "id": 2,
+      "type": "BSAI_IndexTTS2.5LoadAudio",
+      "pos": [
+        0,
+        200
+      ],
+      "size": [
+        320,
+        100
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "widgets_values": [
+        "reference.wav"
+      ],
+      "color": "#226",
+      "bgcolor": "#336",
+      "title": "Speaker Voice"
+    },
+    {
+      "id": 3,
+      "type": "BSAI_IndexTTS2.5Synthesis",
+      "pos": [
+        400,
+        50
+      ],
+      "size": [
+        400,
+        550
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "widgets_values": [
+        "大家好，这是IndexTTS-2.5语音克隆测试。我可以用任何参考音频来克隆你的声音。",
+        "ZH",
+        1.0,
+        false,
+        "",
+        false,
+        1.0,
+        100,
+        1500,
+        0.8,
+        0.8,
+        30,
+        0.0,
+        3,
+        10.0,
+        true,
+        false
+      ],
+      "color": "#16727c",
+      "bgcolor": "#4F0074",
+      "inputs": [
+        {
+          "name": "tts_model_TTS模型",
+          "type": "INDEX_TTS_MODEL",
+          "link": 1
+        },
+        {
+          "name": "text_文本",
+          "type": "STRING",
+          "widget": {
+            "name": "text_文本"
+          },
+          "link": null
+        },
+        {
+          "name": "reference_audio_参考音频",
+          "type": "AUDIO",
+          "link": 2
+        },
+        {
+          "name": "lang_语言",
+          "type": "COMBO",
+          "widget": {
+            "name": "lang_语言"
+          },
+          "link": null
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "BSAI_IndexTTS2.5SaveAudio",
+      "pos": [
+        850,
+        50
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "widgets_values": [
+        "BSAI_IndexTTS2_5_basic",
+        "wav",
+        192,
+        1.0
+      ],
+      "color": "#233",
+      "bgcolor": "#355",
+      "inputs": [
+        {
+          "name": "audio_音频",
+          "type": "AUDIO",
+          "link": 3
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "PreviewAudio",
+      "pos": [
+        850,
+        250
+      ],
+      "size": [
+        320,
+        80
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "color": "#432266",
+      "bgcolor": "#665577",
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 4
+        }
+      ],
+      "title": "预览音频"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      3,
+      0,
+      "INDEX_TTS_MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      2,
+      "AUDIO"
+    ],
+    [
+      3,
+      3,
+      0,
+      4,
+      0,
+      "AUDIO"
+    ],
+    [
+      4,
+      4,
+      1,
+      5,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "info": {
+      "name": "01 - Basic Voice Cloning",
+      "description": "Basic voice cloning: load model -> reference audio -> synthesize -> save + preview"
+    }
+  },
+  "version": 0.4
+}
