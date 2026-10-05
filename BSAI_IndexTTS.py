@@ -21,6 +21,24 @@ import folder_paths
 
 from .model_manager import ensure_model_available, get_model_dir, get_config_path
 
+# ==== BSAI 插件协同 SDK：加载即自动注册（失败不拖垮插件） ====
+try:
+    import sys as _bsai_sys, os as _bsai_os
+    _BSAI_ORCH_DIR = _bsai_os.path.join(
+        _bsai_os.path.dirname(_bsai_os.path.abspath(__file__)),
+        "..", "BSAI-ComfyUI-Orchestrator")
+    if _bsai_os.path.isdir(_BSAI_ORCH_DIR) and _BSAI_ORCH_DIR not in _bsai_sys.path:
+        _bsai_sys.path.insert(0, _BSAI_ORCH_DIR)
+    from bsai_orch_client import BSAIOrch  # noqa: E402
+    BSAIOrch.register(
+        name="BSAI-IndexTTS-2.5",
+        kind="tts_infer",
+        hardware=["cuda", "cpu"],
+    )
+except Exception as _bsai_e:  # 注册失败不得拖垮插件
+    print(f"[BSAI SDK] BSAI-IndexTTS-2.5 注册失败(忽略): {_bsai_e}")
+# ==== BSAI SDK 块结束 ====
+
 
 # ---------------------------------------------------------------------------
 # Monkey-patch torchaudio.save/load to use soundfile fallback
@@ -1274,22 +1292,38 @@ class BSAI_IndexTTS2_5Synthesis:
 
         try:
             print(f"[BSAI_IndexTTS2.5] Synthesizing (lang={lang_语言})...")
-            tts_model_TTS模型.infer(
-                spk_audio_prompt=ref_audio_path,
-                text=text_文本,
-                output_path=out_audio_path,
-                lang=lang_语言,
-                emo_audio_prompt=emo_audio_path,
-                emo_alpha=emo_alpha_情绪强度,
-                emo_vector=emo_vector_param,
-                use_emo_text=use_emo_text_启用情绪文本,
-                emo_text=emo_text_param,
-                use_random=use_random_随机生成,
-                duration_factor=duration_factor_语速因子,
-                verbose=verbose_详细日志,
-                max_text_tokens_per_segment=max_text_tokens_per_segment_每段最大文本Token,
-                **generation_kwargs,
-            )
+            # ---- BSAI 协同：GPU TTS 推理租约（失败不阻断合成，仅叠加租约管理） ----
+            _bsai_alloc = None
+            try:
+                _bsai_alloc = BSAIOrch.allocate("tts_infer", requester="8191")
+                if not _bsai_alloc.ok:
+                    print(f"[BSAI_IndexTTS2.5] SDK 未取得 tts_infer 租约({_bsai_alloc.reason})，仍按原逻辑合成")
+            except Exception as _bsai_ae:
+                print(f"[BSAI_IndexTTS2.5] SDK allocate 异常(忽略): {_bsai_ae}")
+                _bsai_alloc = None
+            try:
+                tts_model_TTS模型.infer(
+                    spk_audio_prompt=ref_audio_path,
+                    text=text_文本,
+                    output_path=out_audio_path,
+                    lang=lang_语言,
+                    emo_audio_prompt=emo_audio_path,
+                    emo_alpha=emo_alpha_情绪强度,
+                    emo_vector=emo_vector_param,
+                    use_emo_text=use_emo_text_启用情绪文本,
+                    emo_text=emo_text_param,
+                    use_random=use_random_随机生成,
+                    duration_factor=duration_factor_语速因子,
+                    verbose=verbose_详细日志,
+                    max_text_tokens_per_segment=max_text_tokens_per_segment_每段最大文本Token,
+                    **generation_kwargs,
+                )
+            finally:
+                if _bsai_alloc is not None:
+                    try:
+                        _bsai_alloc.release()
+                    except Exception:
+                        pass
 
             # Load generated audio (with soundfile fallback for torchaudio 2.11+)
             if not os.path.exists(out_audio_path):
