@@ -59,6 +59,19 @@ def _patch_torchaudio():
 
 def main():
     _patch_torchaudio()
+
+    # ---- isolate the JSON protocol stream from model-library prints ----
+    # indextts / transformers / tqdm print progress to stdout during load & infer,
+    # which would corrupt the line-delimited JSON protocol. Keep a handle to the
+    # real stdout for _send, then redirect python-level prints to stderr.
+    _real_stdout = sys.stdout
+
+    def _send(obj):
+        _real_stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+        _real_stdout.flush()
+
+    sys.stdout = sys.stderr
+
     tts = None
 
     while True:
@@ -76,6 +89,8 @@ def main():
             if cmd == "load":
                 try:
                     from indextts.infer_v2_5 import IndexTTS2
+                    if msg.get("device") == "auto":
+                        msg["device"] = None  # torch >=2.13 rejects "auto"; None => library auto-selects
                     tts = IndexTTS2(**msg)
                     _send({"status": "ok"})
                 except Exception as e:
@@ -86,6 +101,16 @@ def main():
                     _send({"status": "error", "msg": "Model not loaded"})
                     continue
                 try:
+                    # normalize numeric params: transformers logits processors require
+                    # isinstance(x, float) for float params and strict ints for int params;
+                    # UI JSON may send ints where floats are required (e.g. 10) and vice versa
+                    for _k in ("temperature", "top_p", "repetition_penalty", "length_penalty",
+                               "duration_factor", "emo_alpha"):
+                        if _k in msg and msg[_k] is not None:
+                            msg[_k] = float(msg[_k])
+                    for _k in ("top_k", "num_beams", "max_mel_tokens", "max_text_tokens_per_segment"):
+                        if _k in msg and msg[_k] is not None:
+                            msg[_k] = int(msg[_k])
                     tts.infer(**msg)
                     _send({"status": "ok", "output": msg.get("output_path", "")})
                 except Exception as e:

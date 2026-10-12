@@ -131,7 +131,13 @@ def _ensure_compat_shim():
 _ensure_compat_shim()
 
 try:
-    from .BSAI_IndexTTS import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+    # Python 3.14 下 ComfyUI 以 spec_from_file_location 加载插件（无包上下文），
+    # 相对导入 `from .BSAI_IndexTTS` 会因加载顺序而失败（No module named 'BSAI_IndexTTS'）。
+    # 改为自包含绝对导入：将插件目录加入 sys.path 后顶层导入，3.13/3.14 通吃且不依赖顺序。
+    _node_dir = os.path.dirname(os.path.abspath(__file__))
+    if _node_dir not in sys.path:
+        sys.path.insert(0, _node_dir)
+    from BSAI_IndexTTS import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 except Exception as e:
     logger.error(f"Failed to load BSAI_IndexTTS nodes: {e}")
     import traceback

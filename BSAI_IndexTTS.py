@@ -19,7 +19,13 @@ import torch
 import torchaudio
 import folder_paths
 
-from .model_manager import ensure_model_available, get_model_dir, get_config_path
+# Python 3.14 下 ComfyUI 以 spec_from_file_location 加载插件（无包上下文），
+# 相对导入会因加载顺序/独立导入而失败；改为自包含绝对导入。
+_NODE_DIR = os.path.dirname(os.path.abspath(__file__))
+if _NODE_DIR not in sys.path:
+    sys.path.insert(0, _NODE_DIR)
+
+from model_manager import ensure_model_available, get_model_dir, get_config_path
 
 # ==== BSAI 插件协同 SDK：加载即自动注册（失败不拖垮插件） ====
 try:
@@ -51,10 +57,15 @@ _torchaudio_load_orig = torchaudio.load
 
 
 def _torchaudio_save_patched(filepath, src, sample_rate, **kwargs):
-    """Wrap torchaudio.save with soundfile fallback."""
+    """Wrap torchaudio.save with batch-dim normalization and soundfile fallback."""
     try:
-        return _torchaudio_save_orig(filepath, src, sample_rate, **kwargs)
-    except (ImportError, RuntimeError):
+        save_src = src
+        if hasattr(src, 'cpu'):
+            save_src = src.cpu()
+        if getattr(save_src, 'ndim', 0) == 3:
+            save_src = save_src[0]  # [batch, channels, samples] -> [channels, samples]
+        return _torchaudio_save_orig(filepath, save_src, sample_rate, **kwargs)
+    except (ImportError, RuntimeError, ValueError):
         import soundfile as sf
         wav_np = src.cpu().numpy() if hasattr(src, 'cpu') else np.array(src)
         if wav_np.ndim == 3:
@@ -621,9 +632,21 @@ class IndexTTSBridge:
 
 
 def _get_venv_python():
-    """Return the venv python path if the venv exists and is usable."""
+    """Return the python to run the bridge subprocess in.
+
+    Priority: dedicated venv (old transformers) -> current embedded python.
+    The bridge runs synthesis in a *clean subprocess*, isolating it from
+    ComfyUI-process-wide environment factors (custom-node patches, benchmark
+    caches, offload streams...) that can corrupt BigVGAN output into a 1-bit
+    square wave on this user's setup. Set BSAI_INDEXTTS_DIRECT=1 to force
+    in-process synthesis (debug only).
+    """
+    if os.environ.get("BSAI_INDEXTTS_DIRECT", "0") == "1":
+        return None  # debug: force direct in-process synthesis
     if os.path.isfile(_VENV_PYTHON) and os.path.isfile(_BRIDGE_SCRIPT):
         return _VENV_PYTHON
+    if sys.executable:
+        return sys.executable  # embedded python already ships indextts
     return None
 
 
@@ -637,7 +660,7 @@ def _start_bridge(use_bf16, device, use_qwen_emo):
         raise FileNotFoundError(f"Config file not found: {cfg_path}")
 
     venv_python = _get_venv_python()
-    print(f"[BSAI_IndexTTS2.5] Using isolated venv: {venv_python}")
+    print(f"[BSAI_IndexTTS2.5] Bridge python: {venv_python}")
     print(f"[BSAI_IndexTTS2.5] Bridge script: {_BRIDGE_SCRIPT}")
 
     import subprocess
@@ -659,6 +682,8 @@ def _start_bridge(use_bf16, device, use_qwen_emo):
         "use_bf16": use_bf16,
         "device": device,
         "use_qwen_emo": use_qwen_emo,
+        # 与直连路径一致：禁用 BigVGAN 自定义 CUDA kernel（RTX 50 上数值错误→方波）
+        "use_cuda_kernel": False,
     }
     proc.stdin.write(json.dumps(load_msg, ensure_ascii=False) + "\n")
     proc.stdin.flush()
@@ -699,9 +724,10 @@ def _get_indextts(use_bf16=True, device=None, use_qwen_emo=False):
         else:
             return _INDEXTTS_INSTANCE
 
-    # --- Isolated venv path (old transformers for indextts) ---
+    # --- Bridge subprocess path (clean process: immune to ComfyUI-process-wide
+    #     environment factors that corrupt BigVGAN output into square waves) ---
     if _get_venv_python() is not None:
-        print("[BSAI_IndexTTS2.5] Detected isolated venv, starting bridge subprocess...")
+        print("[BSAI_IndexTTS2.5] Starting bridge subprocess for isolated synthesis...")
         tts = _start_bridge(use_bf16=use_bf16, device=device, use_qwen_emo=use_qwen_emo)
         _INDEXTTS_INSTANCE = tts
         _INDEXTTS_MODEL_DIR = ensure_model_available()
@@ -874,6 +900,11 @@ def _get_indextts(use_bf16=True, device=None, use_qwen_emo=False):
         use_bf16=use_bf16,
         device=device,
         use_qwen_emo=use_qwen_emo,
+        # 关键修复：强制禁用 BigVGAN 自定义 CUDA kernel。
+        # 库在 device=None(Loader 'auto') 时会默认 use_cuda_kernel=True 并加载
+        # anti_alias_activation_cuda，该 kernel 在 RTX 50/torch2.13 上数值错误，
+        # 导致 vocoder 输出爆炸->满幅方波（且极慢）。禁用后走官方 torch 实现，输出正常。
+        use_cuda_kernel=False,
     )
 
     _INDEXTTS_INSTANCE = tts
@@ -912,28 +943,59 @@ def _audio_tensor_to_dict(waveform, sample_rate):
     return {"waveform": waveform.cpu(), "sample_rate": sample_rate}
 
 
+def _is_degenerate_audio(waveform):
+    """Detect numerically-broken TTS output (the '1-bit square wave' failure).
+
+    When the GPT/CFM pipeline hits a numerical blowup (Inf/NaN), the vocoder
+    output amplitude explodes and the library's int16 conversion clamps it to a
+    rail-to-rail square wave: values only {-1, 0, +1} with a very high fraction
+    of samples at full scale, or implausibly loud RMS. Healthy speech never
+    exceeds a few percent of clipped samples and sits around -24..-15 dBFS.
+
+    Returns (degenerate: bool, reason: str).
+    """
+    if waveform is None or waveform.numel() == 0:
+        return True, "empty output"
+    w = waveform.float()
+    if not bool(torch.isfinite(w).all()):
+        return True, "waveform contains NaN/Inf"
+    x = w.abs()
+    sat_frac = float((x > 0.999).float().mean().item())
+    rms = float(torch.sqrt((w ** 2).mean()).item())
+    if sat_frac > 0.3:
+        return True, f"clipped-to-rail ({sat_frac * 100:.1f}% samples at full scale)"
+    if rms > 0.25:
+        return True, f"implausible level (rms={rms:.3f}, > -12dBFS)"
+    return False, "ok"
+
+
 def _save_audio_file(path, waveform, sample_rate, fmt=None):
     """Save audio file, using soundfile as fallback when torchcodec is unavailable.
 
     torchaudio 2.11+ requires torchcodec for save/load. This helper tries
     torchaudio first, then falls back to soundfile (which is pre-installed).
     """
+    # ComfyUI AUDIO waveform is [batch, channels, samples] (3D); torchaudio.save
+    # accepts only 1D (mono) or 2D (channels, samples), so normalize here first.
+    wav_t = waveform.cpu()
+    if wav_t.dim() == 3:
+        wav_t = wav_t[0]  # [batch, channels, samples] -> [channels, samples]
+    elif wav_t.dim() == 1:
+        wav_t = wav_t.unsqueeze(0)  # [samples] -> [1, samples]
+
     # Try torchaudio.save first (uses torchcodec if available)
     try:
         if fmt:
-            torchaudio.save(path, waveform.cpu(), sample_rate, format=fmt)
+            torchaudio.save(path, wav_t, sample_rate, format=fmt)
         else:
-            torchaudio.save(path, waveform.cpu(), sample_rate)
+            torchaudio.save(path, wav_t, sample_rate)
         return
-    except (ImportError, RuntimeError):
+    except (ImportError, RuntimeError, ValueError):
         pass
 
     # Fallback to soundfile
     import soundfile as sf
-    wav_np = waveform.cpu().numpy()
-    # Handle 3D (batch, channels, samples) -> squeeze batch dimension
-    if wav_np.ndim == 3:
-        wav_np = wav_np[0]  # (channels, samples)
+    wav_np = wav_t.numpy()
     # torchaudio: (channels, samples), soundfile: (samples, channels)
     if wav_np.ndim == 2:
         wav_np = wav_np.T
@@ -1103,7 +1165,9 @@ class BSAI_IndexTTS2_5Loader:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "use_bf16_使用BF16": ("BOOLEAN", {"default": True}),
+                # 默认 fp32：官方 CLI 默认精度，数值最稳定。BF16 在部分环境(如 RTX 50 + ComfyUI --fast)
+                # 下可能偶发数值爆炸导致输出退化为满幅方波，需用时手动开启，且合成节点带自动降级重试保护。
+                "use_bf16_使用BF16": ("BOOLEAN", {"default": False}),
                 "device_设备": (["auto", "cuda:0", "cpu"], {"default": "auto"}),
             },
             "optional": {
@@ -1141,8 +1205,9 @@ class BSAI_IndexTTS2_5Synthesis:
         return {
             "required": {
                 "tts_model_TTS模型": ("INDEX_TTS_MODEL",),
+                # 默认文本与默认语言(ZH)对齐，避免 英文文本+ZH 语言 的失配组合诱发退化生成
                 "text_文本": ("STRING", {
-                    "default": "Hello, this is a test of IndexTTS-2.5 voice cloning.",
+                    "default": "同学们，今天我们来学习百声电影工厂的声音克隆功能。",
                     "multiline": True,
                 }),
                 "reference_audio_参考音频": ("AUDIO",),
@@ -1290,75 +1355,144 @@ class BSAI_IndexTTS2_5Synthesis:
         print(f"[BSAI_IndexTTS2.5] Emotion mode: {emotion_mode}")
         print(f"[BSAI_IndexTTS2.5] Duration factor: {duration_factor_语速因子}, Use random: {use_random_随机生成}")
 
+        # 数值爆炸防护：退化输出(1bit 方波/NaN)检测 + 自动降级重试。
+        # 首次退化若当前为 BF16 实例 → 卸载并按 fp32 重载重试；仍失败则明确报错，绝不静默保存废音频。
         try:
-            print(f"[BSAI_IndexTTS2.5] Synthesizing (lang={lang_语言})...")
-            # ---- BSAI 协同：GPU TTS 推理租约（失败不阻断合成，仅叠加租约管理） ----
-            _bsai_alloc = None
-            try:
-                _bsai_alloc = BSAIOrch.allocate("tts_infer", requester="8191")
-                if not _bsai_alloc.ok:
-                    print(f"[BSAI_IndexTTS2.5] SDK 未取得 tts_infer 租约({_bsai_alloc.reason})，仍按原逻辑合成")
-            except Exception as _bsai_ae:
-                print(f"[BSAI_IndexTTS2.5] SDK allocate 异常(忽略): {_bsai_ae}")
+            attempt = 0
+            max_attempts = 2
+            while True:
+                print(f"[BSAI_IndexTTS2.5] Synthesizing (lang={lang_语言})...")
+                # ---- BSAI 协同：GPU TTS 推理租约（失败不阻断合成，仅叠加租约管理） ----
                 _bsai_alloc = None
-            try:
-                tts_model_TTS模型.infer(
-                    spk_audio_prompt=ref_audio_path,
-                    text=text_文本,
-                    output_path=out_audio_path,
-                    lang=lang_语言,
-                    emo_audio_prompt=emo_audio_path,
-                    emo_alpha=emo_alpha_情绪强度,
-                    emo_vector=emo_vector_param,
-                    use_emo_text=use_emo_text_启用情绪文本,
-                    emo_text=emo_text_param,
-                    use_random=use_random_随机生成,
-                    duration_factor=duration_factor_语速因子,
-                    verbose=verbose_详细日志,
-                    max_text_tokens_per_segment=max_text_tokens_per_segment_每段最大文本Token,
-                    **generation_kwargs,
-                )
-            finally:
-                if _bsai_alloc is not None:
-                    try:
-                        _bsai_alloc.release()
-                    except Exception:
-                        pass
+                try:
+                    _bsai_alloc = BSAIOrch.allocate("tts_infer", requester="8191")
+                    if not _bsai_alloc.ok:
+                        print(f"[BSAI_IndexTTS2.5] SDK 未取得 tts_infer 租约({_bsai_alloc.reason})，仍按原逻辑合成")
+                except Exception as _bsai_ae:
+                    print(f"[BSAI_IndexTTS2.5] SDK allocate 异常(忽略): {_bsai_ae}")
+                    _bsai_alloc = None
+                try:
+                    tts_model_TTS模型.infer(
+                        spk_audio_prompt=ref_audio_path,
+                        text=text_文本,
+                        output_path=out_audio_path,
+                        lang=lang_语言,
+                        emo_audio_prompt=emo_audio_path,
+                        emo_alpha=emo_alpha_情绪强度,
+                        emo_vector=emo_vector_param,
+                        use_emo_text=use_emo_text_启用情绪文本,
+                        emo_text=emo_text_param,
+                        use_random=use_random_随机生成,
+                        duration_factor=duration_factor_语速因子,
+                        verbose=verbose_详细日志,
+                        max_text_tokens_per_segment=max_text_tokens_per_segment_每段最大文本Token,
+                        **generation_kwargs,
+                    )
+                finally:
+                    if _bsai_alloc is not None:
+                        try:
+                            _bsai_alloc.release()
+                        except Exception:
+                            pass
 
-            # Load generated audio (with soundfile fallback for torchaudio 2.11+)
-            if not os.path.exists(out_audio_path):
-                raise RuntimeError("TTS inference completed but output file not found.")
+                # Load generated audio (with soundfile fallback for torchaudio 2.11+)
+                if not os.path.exists(out_audio_path):
+                    raise RuntimeError("TTS inference completed but output file not found.")
 
-            try:
-                audio_waveform, audio_sr = torchaudio.load(out_audio_path)
-            except (ImportError, RuntimeError):
-                import soundfile as sf
-                data, audio_sr = sf.read(out_audio_path)
-                audio_waveform = torch.from_numpy(data).float()
-                if audio_waveform.dim() == 1:
-                    audio_waveform = audio_waveform.unsqueeze(0)
-                else:
-                    audio_waveform = audio_waveform.T
-            # Convert to mono if needed
-            if audio_waveform.shape[0] > 1:
-                audio_waveform = audio_waveform.mean(dim=0, keepdim=True)
+                try:
+                    audio_waveform, audio_sr = torchaudio.load(out_audio_path)
+                except (ImportError, RuntimeError):
+                    import soundfile as sf
+                    data, audio_sr = sf.read(out_audio_path)
+                    audio_waveform = torch.from_numpy(data).float()
+                    if audio_waveform.dim() == 1:
+                        audio_waveform = audio_waveform.unsqueeze(0)
+                    else:
+                        audio_waveform = audio_waveform.T
+                # Convert to mono if needed
+                if audio_waveform.shape[0] > 1:
+                    audio_waveform = audio_waveform.mean(dim=0, keepdim=True)
 
-            # Return as ComfyUI AUDIO dict
-            audio_dict = _audio_tensor_to_dict(audio_waveform, audio_sr)
+                # 退化输出检测（满幅方波 / NaN / 爆响），健康语音削波占比接近 0
+                is_degenerate, reason = _is_degenerate_audio(audio_waveform)
+                if not is_degenerate:
+                    # Return as ComfyUI AUDIO dict
+                    audio_dict = _audio_tensor_to_dict(audio_waveform, audio_sr)
 
-            duration = audio_waveform.shape[-1] / audio_sr
-            status_parts = [
-                f"Success | Duration: {duration:.2f}s",
-                f"Sample Rate: {audio_sr}Hz",
-                f"Lang: {lang_语言}",
-                f"Emotion: {emotion_mode}",
-                f"Speed: {duration_factor_语速因子:.2f}x",
-            ]
-            status = " | ".join(status_parts)
-            print(f"[BSAI_IndexTTS2.5] {status}")
+                    duration = audio_waveform.shape[-1] / audio_sr
+                    status_parts = [
+                        f"Success | Duration: {duration:.2f}s",
+                        f"Sample Rate: {audio_sr}Hz",
+                        f"Lang: {lang_语言}",
+                        f"Emotion: {emotion_mode}",
+                        f"Speed: {duration_factor_语速因子:.2f}x",
+                    ]
+                    status = " | ".join(status_parts)
+                    print(f"[BSAI_IndexTTS2.5] {status}")
 
-            return (audio_dict, status)
+                    return (audio_dict, status)
 
+                # ---- degenerate output: save a diagnostic copy first ----
+                try:
+                    _diag_dir = folder_paths.get_output_directory()
+                    _diag_path = os.path.join(
+                        _diag_dir,
+                        f"BSAI_IndexTTS25_degenerate_{time.strftime('%Y%m%d_%H%M%S')}.wav",
+                    )
+                    _save_audio_file(_diag_path, audio_waveform, audio_sr)
+                    print(f"[BSAI_IndexTTS2.5] 退化样本已留存诊断: {_diag_path}")
+                except Exception:
+                    pass
+
+                # ---- rescue: implausible level (too loud but NOT rail-clipped) ----
+                # Peak-normalize and verify speech-like morphology (low zero-crossing
+                # rate + rich unique values). Loud-but-healthy speech passes; real
+                # noise/square waves still fail and are rejected.
+                if "implausible" in reason:
+                    _pk = audio_waveform.abs().max().clamp_min(1e-6)
+                    _norm = audio_waveform / _pk * 0.9
+                    _nf = _norm.float()
+                    _finite_ok = bool(torch.isfinite(_nf).all())
+                    _sat_n = float((_nf.abs() > 0.999).float().mean().item())
+                    _z = _nf.flatten()
+                    _zcr = float(((_z[1:] * _z[:-1] < 0).float().mean()).item())
+                    _uniq = len(torch.unique(torch.round(_z, decimals=3)))
+                    if _finite_ok and _sat_n < 0.3 and _zcr < 0.25 and _uniq > 80:
+                        _norm_rms = float(torch.sqrt((_nf ** 2).mean()).item())
+                        print(
+                            f"[BSAI_IndexTTS2.5] 高电平输出({reason})，峰值正常化后通过"
+                            f"(rms={_norm_rms:.3f}, zcr={_zcr:.3f}, uniq={_uniq})，已放行"
+                        )
+                        audio_waveform = _norm
+                        audio_dict = _audio_tensor_to_dict(audio_waveform, audio_sr)
+                        duration = audio_waveform.shape[-1] / audio_sr
+                        status = (
+                            f"Success(normalized) | Duration: {duration:.2f}s | "
+                            f"Sample Rate: {audio_sr}Hz | Lang: {lang_语言} | "
+                            f"Raw rms: {float(torch.sqrt((audio_waveform.float() ** 2).mean())):.3f}"
+                        )
+                        print(f"[BSAI_IndexTTS2.5] {status}")
+                        return (audio_dict, status)
+
+                # 退化 → 重试
+                attempt += 1
+                print(f"[BSAI_IndexTTS2.5] WARNING: 检测到退化音频 ({reason})，触发保护重试 {attempt}/{max_attempts}...")
+                if attempt >= max_attempts:
+                    raise RuntimeError(
+                        f"IndexTTS-2.5 连续 {max_attempts} 次生成退化音频（{reason}），已拒绝输出。"
+                        f"建议：1) 保持 Loader 节点 use_bf16 关闭（fp32 数值最稳定）；"
+                        f"2) 更换参考音频或缩短文本后重试。"
+                    )
+                if getattr(tts_model_TTS模型, "dtype", None) is not None:
+                    _old_dev = getattr(tts_model_TTS模型, "device", "auto")
+                    _old_emo = getattr(tts_model_TTS模型, "qwen_emo", None)
+                    _unload_indextts()
+                    tts_model_TTS模型 = _get_indextts(
+                        use_bf16=False,
+                        device=_old_dev,
+                        use_qwen_emo=_old_emo is not None,
+                    )
+                    print("[BSAI_IndexTTS2.5] 已自动卸载并降级为 fp32 实例，重试合成...")
         except Exception as e:
             error_msg = f"TTS synthesis failed: {e}"
             print(f"[BSAI_IndexTTS2.5] ERROR: {error_msg}")
