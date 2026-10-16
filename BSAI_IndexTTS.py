@@ -1070,7 +1070,7 @@ class BSAI_IndexTTS2_5LoadAudio:
             ('.wav', '.mp3', '.flac', '.ogg', '.m4a'))] if os.path.isdir(input_dir) else []
         return {
             "required": {
-                "audio_音频": (sorted(files) if files else ["upload_your_audio_file.wav"], ),
+                "audio": (sorted(files) if files else ["upload_your_audio_file.wav"], ),
             },
         }
 
@@ -1081,7 +1081,7 @@ class BSAI_IndexTTS2_5LoadAudio:
     OUTPUT_NODE = True
 
     @classmethod
-    def VALIDATE_INPUTS(cls, audio_音频):
+    def VALIDATE_INPUTS(cls, audio):
         # Don't reject placeholder filenames during validation — users will
         # upload their own files before executing. File existence is checked
         # at execution time in load_audio() with a clear error message.
@@ -1099,20 +1099,20 @@ class BSAI_IndexTTS2_5LoadAudio:
         except Exception:
             return ""
 
-    def load_audio(self, audio_音频):
-        if not audio_音频 or audio_音频.startswith("upload_"):
+    def load_audio(self, audio):
+        if not audio or audio.startswith("upload_"):
             raise ValueError("Please upload an audio file using the upload button, or select one from the dropdown.")
 
-        audio_path = folder_paths.get_annotated_filepath(audio_音频)
+        audio_path = folder_paths.get_annotated_filepath(audio)
         if not os.path.isfile(audio_path):
             # Try input directory directly
             input_dir = folder_paths.get_input_directory()
-            audio_path = os.path.join(input_dir, audio_音频)
+            audio_path = os.path.join(input_dir, audio)
             if not os.path.isfile(audio_path):
                 # Generate a silent placeholder so the workflow can execute
                 # without crashing. The user will see a warning and should
                 # upload their own reference audio for proper voice cloning.
-                print(f"[BSAI_IndexTTS2.5] WARNING: Audio file '{audio_音频}' not found. "
+                print(f"[BSAI_IndexTTS2.5] WARNING: Audio file '{audio}' not found. "
                       f"Using a 3-second silent placeholder. "
                       f"Please upload your own audio file for voice cloning.")
                 sample_rate = 22050
@@ -1167,12 +1167,12 @@ class BSAI_IndexTTS2_5Loader:
             "required": {
                 # 默认 fp32：官方 CLI 默认精度，数值最稳定。BF16 在部分环境(如 RTX 50 + ComfyUI --fast)
                 # 下可能偶发数值爆炸导致输出退化为满幅方波，需用时手动开启，且合成节点带自动降级重试保护。
-                "use_bf16_使用BF16": ("BOOLEAN", {"default": False}),
-                "device_设备": (["auto", "cuda:0", "cpu"], {"default": "auto"}),
+                "use_bf16": ("BOOLEAN", {"default": False}),
+                "device": (["auto", "cuda:0", "cpu"], {"default": "auto"}),
             },
             "optional": {
-                "use_qwen_emo_千问情绪模型": ("BOOLEAN", {"default": False}),
-                "force_reload_强制重载": ("BOOLEAN", {"default": False}),
+                "use_qwen_emo": ("BOOLEAN", {"default": False}),
+                "force_reload": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -1181,12 +1181,12 @@ class BSAI_IndexTTS2_5Loader:
     FUNCTION = "load_model"
     CATEGORY = "BSAI"
 
-    def load_model(self, use_bf16_使用BF16=True, device_设备="auto", use_qwen_emo_千问情绪模型=False, force_reload_强制重载=False):
-        if force_reload_强制重载:
+    def load_model(self, use_bf16=True, device="auto", use_qwen_emo=False, force_reload=False):
+        if force_reload:
             _unload_indextts()
 
-        device = None if device_设备 == "auto" else device_设备
-        tts = _get_indextts(use_bf16=use_bf16_使用BF16, device=device, use_qwen_emo=use_qwen_emo_千问情绪模型)
+        device = None if device == "auto" else device
+        tts = _get_indextts(use_bf16=use_bf16, device=device, use_qwen_emo=use_qwen_emo)
         return (tts,)
 
 
@@ -1206,57 +1206,57 @@ class BSAI_IndexTTS2_5Synthesis:
             "required": {
                 "tts_model_TTS模型": ("INDEX_TTS_MODEL",),
                 # 默认文本与默认语言(ZH)对齐，避免 英文文本+ZH 语言 的失配组合诱发退化生成
-                "text_文本": ("STRING", {
+                "text": ("STRING", {
                     "default": "同学们，今天我们来学习百声电影工厂的声音克隆功能。",
                     "multiline": True,
                 }),
-                "reference_audio_参考音频": ("AUDIO",),
-                "lang_语言": (["ZH", "EN", "JA", "ES", "AR", "zhen"], {"default": "ZH"}),
+                "reference_audio": ("AUDIO",),
+                "lang": (["ZH", "EN", "JA", "ES", "AR", "zhen"], {"default": "ZH"}),
             },
             "optional": {
                 # --- Emotion control ---
-                "emo_audio_prompt_情绪参考音频": ("AUDIO", ),
-                "emo_alpha_情绪强度": ("FLOAT", {
+                "emo_audio_prompt": ("AUDIO", ),
+                "emo_alpha": ("FLOAT", {
                     "default": 1.0, "min": 0.0, "max": 1.0, "step": 0.05,
                 }),
-                "emo_vector_情绪向量": ("EMO_VECTOR", ),
-                "use_emo_text_启用情绪文本": ("BOOLEAN", {"default": False}),
-                "emo_text_情绪文本": ("STRING", {
+                "emo_vector": ("EMO_VECTOR", ),
+                "use_emo_text": ("BOOLEAN", {"default": False}),
+                "emo_text": ("STRING", {
                     "default": "",
                     "multiline": True,
                 }),
-                "use_random_随机生成": ("BOOLEAN", {"default": False}),
+                "use_random": ("BOOLEAN", {"default": False}),
                 # --- Speed control ---
-                "duration_factor_语速因子": ("FLOAT", {
+                "duration_factor": ("FLOAT", {
                     "default": 1.0, "min": 0.5, "max": 2.0, "step": 0.05,
                 }),
                 # --- Generation parameters ---
-                "max_text_tokens_per_segment_每段最大文本Token": ("INT", {
+                "max_text_tokens_per_segment": ("INT", {
                     "default": 100, "min": 20, "max": 600, "step": 10,
                 }),
-                "max_mel_tokens_最大MelToken": ("INT", {
+                "max_mel_tokens": ("INT", {
                     "default": 1500, "min": 100, "max": 1815, "step": 50,
                 }),
-                "temperature_温度": ("FLOAT", {
+                "temperature": ("FLOAT", {
                     "default": 0.8, "min": 0.1, "max": 2.0, "step": 0.05,
                 }),
-                "top_p_核采样": ("FLOAT", {
+                "top_p": ("FLOAT", {
                     "default": 0.8, "min": 0.1, "max": 1.0, "step": 0.05,
                 }),
                 "top_k_TopK采样": ("INT", {
                     "default": 30, "min": 1, "max": 100, "step": 1,
                 }),
-                "length_penalty_长度惩罚": ("FLOAT", {
+                "length_penalty": ("FLOAT", {
                     "default": 0.0, "min": -2.0, "max": 2.0, "step": 0.1,
                 }),
-                "num_beams_束宽": ("INT", {
+                "num_beams": ("INT", {
                     "default": 3, "min": 1, "max": 10, "step": 1,
                 }),
-                "repetition_penalty_重复惩罚": ("FLOAT", {
+                "repetition_penalty": ("FLOAT", {
                     "default": 10.0, "min": 1.0, "max": 20.0, "step": 0.5,
                 }),
-                "do_sample_采样模式": ("BOOLEAN", {"default": True}),
-                "verbose_详细日志": ("BOOLEAN", {"default": False}),
+                "do_sample": ("BOOLEAN", {"default": True}),
+                "verbose": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -1268,33 +1268,33 @@ class BSAI_IndexTTS2_5Synthesis:
     def synthesize(
         self,
         tts_model_TTS模型,
-        text_文本,
-        reference_audio_参考音频,
-        lang_语言="ZH",
-        emo_audio_prompt_情绪参考音频=None,
-        emo_alpha_情绪强度=1.0,
-        emo_vector_情绪向量=None,
-        use_emo_text_启用情绪文本=False,
-        emo_text_情绪文本="",
-        use_random_随机生成=False,
-        duration_factor_语速因子=1.0,
-        max_text_tokens_per_segment_每段最大文本Token=100,
-        max_mel_tokens_最大MelToken=1500,
-        temperature_温度=0.8,
-        top_p_核采样=0.8,
+        text,
+        reference_audio,
+        lang="ZH",
+        emo_audio_prompt=None,
+        emo_alpha=1.0,
+        emo_vector=None,
+        use_emo_text=False,
+        emo_text="",
+        use_random=False,
+        duration_factor=1.0,
+        max_text_tokens_per_segment=100,
+        max_mel_tokens=1500,
+        temperature=0.8,
+        top_p=0.8,
         top_k_TopK采样=30,
-        length_penalty_长度惩罚=0.0,
-        num_beams_束宽=3,
-        repetition_penalty_重复惩罚=10.0,
-        do_sample_采样模式=True,
-        verbose_详细日志=False,
+        length_penalty=0.0,
+        num_beams=3,
+        repetition_penalty=10.0,
+        do_sample=True,
+        verbose=False,
     ):
-        if not text_文本 or not text_文本.strip():
+        if not text or not text.strip():
             raise ValueError("Text input cannot be empty.")
 
         # Save reference audio to a temp file (IndexTTS expects a file path)
-        ref_waveform = reference_audio_参考音频["waveform"]
-        ref_sr = reference_audio_参考音频["sample_rate"]
+        ref_waveform = reference_audio["waveform"]
+        ref_sr = reference_audio["sample_rate"]
 
         # Ensure 2D shape [channels, samples] (ComfyUI AUDIO is 3D: batch/channels/samples)
         if ref_waveform.dim() == 3:
@@ -1312,9 +1312,9 @@ class BSAI_IndexTTS2_5Synthesis:
 
         # --- Handle emotion reference audio ---
         emo_audio_path = None
-        if emo_audio_prompt_情绪参考音频 is not None:
-            emo_wf = emo_audio_prompt_情绪参考音频["waveform"]
-            emo_sr = emo_audio_prompt_情绪参考音频["sample_rate"]
+        if emo_audio_prompt is not None:
+            emo_wf = emo_audio_prompt["waveform"]
+            emo_sr = emo_audio_prompt["sample_rate"]
             if emo_wf.dim() == 3:
                 emo_wf = emo_wf[0]
             elif emo_wf.dim() == 1:
@@ -1325,35 +1325,35 @@ class BSAI_IndexTTS2_5Synthesis:
 
         # --- Handle emotion text ---
         # Empty string means no custom emotion text
-        emo_text_param = emo_text_情绪文本.strip() if emo_text_情绪文本 and emo_text_情绪文本.strip() else None
+        emo_text_param = emo_text.strip() if emo_text and emo_text.strip() else None
 
         # --- Handle emotion vector ---
         # emo_vector comes from BSAI_IndexTTS2.5EmotionVector node (a list of 8 floats)
         # or None if not connected
-        emo_vector_param = emo_vector_情绪向量 if emo_vector_情绪向量 is not None else None
+        emo_vector_param = emo_vector if emo_vector is not None else None
 
         # Build generation kwargs for v2.5 infer()
         generation_kwargs = {
-            "temperature": temperature_温度,
-            "top_p": top_p_核采样,
+            "temperature": temperature,
+            "top_p": top_p,
             "top_k": top_k_TopK采样,
-            "length_penalty": length_penalty_长度惩罚,
-            "num_beams": num_beams_束宽,
-            "repetition_penalty": repetition_penalty_重复惩罚,
-            "max_mel_tokens": max_mel_tokens_最大MelToken,
-            "do_sample": do_sample_采样模式,
+            "length_penalty": length_penalty,
+            "num_beams": num_beams,
+            "repetition_penalty": repetition_penalty,
+            "max_mel_tokens": max_mel_tokens,
+            "do_sample": do_sample,
         }
 
         # Log emotion settings
         emotion_mode = "default (from speaker voice)"
         if emo_vector_param is not None:
             emotion_mode = f"emotion vector: {emo_vector_param}"
-        elif use_emo_text_启用情绪文本:
+        elif use_emo_text:
             emotion_mode = f"text-based emotion (emo_text={'auto' if emo_text_param is None else repr(emo_text_param[:50])})"
         elif emo_audio_path is not None:
-            emotion_mode = f"emotion reference audio (alpha={emo_alpha_情绪强度})"
+            emotion_mode = f"emotion reference audio (alpha={emo_alpha})"
         print(f"[BSAI_IndexTTS2.5] Emotion mode: {emotion_mode}")
-        print(f"[BSAI_IndexTTS2.5] Duration factor: {duration_factor_语速因子}, Use random: {use_random_随机生成}")
+        print(f"[BSAI_IndexTTS2.5] Duration factor: {duration_factor}, Use random: {use_random}")
 
         # 数值爆炸防护：退化输出(1bit 方波/NaN)检测 + 自动降级重试。
         # 首次退化若当前为 BF16 实例 → 卸载并按 fp32 重载重试；仍失败则明确报错，绝不静默保存废音频。
@@ -1361,7 +1361,7 @@ class BSAI_IndexTTS2_5Synthesis:
             attempt = 0
             max_attempts = 2
             while True:
-                print(f"[BSAI_IndexTTS2.5] Synthesizing (lang={lang_语言})...")
+                print(f"[BSAI_IndexTTS2.5] Synthesizing (lang={lang})...")
                 # ---- BSAI 协同：GPU TTS 推理租约（失败不阻断合成，仅叠加租约管理） ----
                 _bsai_alloc = None
                 try:
@@ -1374,18 +1374,18 @@ class BSAI_IndexTTS2_5Synthesis:
                 try:
                     tts_model_TTS模型.infer(
                         spk_audio_prompt=ref_audio_path,
-                        text=text_文本,
+                        text=text,
                         output_path=out_audio_path,
-                        lang=lang_语言,
+                        lang=lang,
                         emo_audio_prompt=emo_audio_path,
-                        emo_alpha=emo_alpha_情绪强度,
+                        emo_alpha=emo_alpha,
                         emo_vector=emo_vector_param,
-                        use_emo_text=use_emo_text_启用情绪文本,
+                        use_emo_text=use_emo_text,
                         emo_text=emo_text_param,
-                        use_random=use_random_随机生成,
-                        duration_factor=duration_factor_语速因子,
-                        verbose=verbose_详细日志,
-                        max_text_tokens_per_segment=max_text_tokens_per_segment_每段最大文本Token,
+                        use_random=use_random,
+                        duration_factor=duration_factor,
+                        verbose=verbose,
+                        max_text_tokens_per_segment=max_text_tokens_per_segment,
                         **generation_kwargs,
                     )
                 finally:
@@ -1423,9 +1423,9 @@ class BSAI_IndexTTS2_5Synthesis:
                     status_parts = [
                         f"Success | Duration: {duration:.2f}s",
                         f"Sample Rate: {audio_sr}Hz",
-                        f"Lang: {lang_语言}",
+                        f"Lang: {lang}",
                         f"Emotion: {emotion_mode}",
-                        f"Speed: {duration_factor_语速因子:.2f}x",
+                        f"Speed: {duration_factor:.2f}x",
                     ]
                     status = " | ".join(status_parts)
                     print(f"[BSAI_IndexTTS2.5] {status}")
@@ -1468,7 +1468,7 @@ class BSAI_IndexTTS2_5Synthesis:
                         duration = audio_waveform.shape[-1] / audio_sr
                         status = (
                             f"Success(normalized) | Duration: {duration:.2f}s | "
-                            f"Sample Rate: {audio_sr}Hz | Lang: {lang_语言} | "
+                            f"Sample Rate: {audio_sr}Hz | Lang: {lang} | "
                             f"Raw rms: {float(torch.sqrt((audio_waveform.float() ** 2).mean())):.3f}"
                         )
                         print(f"[BSAI_IndexTTS2.5] {status}")
@@ -1521,16 +1521,16 @@ class BSAI_IndexTTS2_5EmotionVector:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "happy_开心": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "angry_愤怒": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "sad_悲伤": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "fear_恐惧": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "disgust_厌恶": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "melancholy_忧郁": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "surprise_惊讶": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "calm_平静": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
-                "preset": (["none 无", "happy 开心", "angry 愤怒", "sad 悲伤", "fear 恐惧", "disgust 厌恶",
-                            "melancholy 忧郁", "surprise 惊讶", "calm 平静"], {"default": "none 无"}),
+                "happy": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "angry": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "sad": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "fear": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "disgust": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "melancholy": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "surprise": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "calm": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+                "preset": (["none", "happy", "angry", "sad", "fear", "disgust",
+                            "melancholy", "surprise", "calm"], {"default": "none"}),
             },
         }
 
@@ -1539,24 +1539,24 @@ class BSAI_IndexTTS2_5EmotionVector:
     FUNCTION = "build_vector"
     CATEGORY = "BSAI"
 
-    def build_vector(self, happy_开心, angry_愤怒, sad_悲伤, fear_恐惧, disgust_厌恶, melancholy_忧郁, surprise_惊讶, calm_平静, preset="none 无"):
+    def build_vector(self, happy, angry, sad, fear, disgust, melancholy, surprise, calm, preset="none"):
         # Apply preset if selected (overrides individual values)
         presets = {
-            "happy 开心":      [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            "angry 愤怒":      [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            "sad 悲伤":        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            "fear 恐惧":       [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-            "disgust 厌恶":    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
-            "melancholy 忧郁": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
-            "surprise 惊讶":   [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
-            "calm 平静":       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+            "happy":      [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "angry":      [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "sad":        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            "fear":       [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            "disgust":    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            "melancholy": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            "surprise":   [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+            "calm":       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
         }
 
-        if preset != "none 无" and preset in presets:
+        if preset != "none" and preset in presets:
             vec = presets[preset]
             print(f"[BSAI_IndexTTS2.5] Emotion vector preset: {preset} -> {vec}")
         else:
-            vec = [happy_开心, angry_愤怒, sad_悲伤, fear_恐惧, disgust_厌恶, melancholy_忧郁, surprise_惊讶, calm_平静]
+            vec = [happy, angry, sad, fear, disgust, melancholy, surprise, calm]
             print(f"[BSAI_IndexTTS2.5] Emotion vector: {vec}")
 
         return (vec,)
@@ -1574,13 +1574,13 @@ class BSAI_IndexTTS2_5SaveAudio:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "audio_音频": ("AUDIO",),
-                "filename_prefix_文件名前缀": ("STRING", {"default": "BSAI_IndexTTS2_5"}),
-                "format_格式": (["wav", "mp3", "flac"], {"default": "wav"}),
+                "audio": ("AUDIO",),
+                "filename_prefix": ("STRING", {"default": "BSAI_IndexTTS2_5"}),
+                "format": (["wav", "mp3", "flac"], {"default": "wav"}),
             },
             "optional": {
                 "mp3_bitrate_MP3码率": ("INT", {"default": 192, "min": 64, "max": 320, "step": 32}),
-                "output_gain_输出增益": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 4.0, "step": 0.05}),
+                "output_gain": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 4.0, "step": 0.05}),
             },
         }
 
@@ -1590,37 +1590,44 @@ class BSAI_IndexTTS2_5SaveAudio:
     CATEGORY = "BSAI"
     OUTPUT_NODE = True
 
-    def save_audio(self, audio_音频, filename_prefix_文件名前缀="BSAI_IndexTTS2_5", format_格式="wav", mp3_bitrate_MP3码率=192, output_gain_输出增益=1.0):
-        waveform = audio_音频["waveform"]
-        sample_rate = audio_音频["sample_rate"]
+    def save_audio(self, audio, filename_prefix="BSAI_IndexTTS2_5", format="wav", mp3_bitrate_MP3码率=192, output_gain=1.0):
+        waveform = audio["waveform"]
+        sample_rate = audio["sample_rate"]
 
         # Apply gain
-        if output_gain_输出增益 != 1.0:
-            waveform = waveform * output_gain_输出增益
+        if output_gain != 1.0:
+            waveform = waveform * output_gain
             # Clamp to valid range
             waveform = torch.clamp(waveform, -1.0, 1.0)
 
-        # Generate output path
+        # Generate output path (confined to ComfyUI's output dir)
         output_dir = folder_paths.get_output_directory()
         os.makedirs(output_dir, exist_ok=True)
+        output_dir_real = os.path.realpath(output_dir)
 
         # Find unique filename
-        base_name = filename_prefix_文件名前缀
+        base_name = filename_prefix
         counter = 1
         while True:
-            ext = format_格式 if format_格式 != "wav" else "wav"
+            ext = format if format != "wav" else "wav"
             filename = f"{base_name}_{counter:05d}.{ext}"
             filepath = os.path.join(output_dir, filename)
+            # Containment: reject absolute paths / ".." escaping the output dir.
+            if os.path.commonpath([output_dir_real, os.path.realpath(filepath)]) != output_dir_real:
+                raise ValueError(
+                    "filename_prefix must stay inside ComfyUI's output directory "
+                    "(absolute paths and '..' are not allowed)."
+                )
             if not os.path.exists(filepath):
                 break
             counter += 1
 
         # Save audio
-        if format_格式 == "wav":
+        if format == "wav":
             _save_audio_file(filepath, waveform, sample_rate)
-        elif format_格式 == "flac":
+        elif format == "flac":
             _save_audio_file(filepath, waveform, sample_rate, fmt="flac")
-        elif format_格式 == "mp3":
+        elif format == "mp3":
             # Try MP3, fallback to WAV
             result = _save_audio_file(filepath, waveform, sample_rate, fmt="mp3")
             if result and result != filepath:
@@ -1641,7 +1648,7 @@ class BSAI_IndexTTS2_5UnloadModel:
         return {
             "required": {},
             "optional": {
-                "any_input_任意输入": ("*",),
+                "any_input": ("*",),
             },
         }
 
@@ -1650,7 +1657,7 @@ class BSAI_IndexTTS2_5UnloadModel:
     CATEGORY = "BSAI"
     OUTPUT_NODE = True
 
-    def unload_model(self, any_input_任意输入=None):
+    def unload_model(self, any_input=None):
         _unload_indextts()
         return {}
 

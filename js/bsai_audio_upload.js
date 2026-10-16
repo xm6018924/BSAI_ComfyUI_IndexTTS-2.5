@@ -46,7 +46,7 @@ function setupUpload(node) {
 
     // --- 加载音频 button ---
     const loadBtn = document.createElement("button");
-    loadBtn.textContent = "📁 加载音频";
+    loadBtn.textContent = "📁 Load Audio";
     loadBtn.style.cssText = `
         display: block; width: 100%; padding: 5px 8px; margin-bottom: 4px;
         background: #2a2a3e; color: #88aacc; border: 1px solid #3a5a7a;
@@ -68,7 +68,7 @@ function setupUpload(node) {
         const file = fileInput.files[0];
         if (!file) return;
 
-        loadBtn.textContent = "⏳ 加载中...";
+        loadBtn.textContent = "⏳ Loading...";
         loadBtn.disabled = true;
 
         try {
@@ -97,9 +97,9 @@ function setupUpload(node) {
             updateAudioPreview(data.name);
         } catch (err) {
             console.error("[BSAI] Upload error:", err);
-            alert(`加载失败: ${err.message}`);
+            alert(`Load failed: ${err.message}`);
         } finally {
-            loadBtn.textContent = "📁 加载音频";
+            loadBtn.textContent = "📁 Load Audio";
             loadBtn.disabled = false;
             fileInput.value = "";
         }
@@ -154,7 +154,7 @@ function setupUpload(node) {
     volIcon.style.cssText = `
         flex-shrink: 0; font-size: 12px; cursor: pointer; opacity: 0.7;
     `;
-    volIcon.title = "点击切换静音";
+    volIcon.title = "Click to toggle mute";
     let muted = false;
     volIcon.onclick = () => {
         muted = !muted;
