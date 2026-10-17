@@ -77,8 +77,12 @@ try:
     import transformers.pytorch_utils as _pytorch_utils
 
     if not hasattr(_pytorch_utils, 'isin_mps_friendly'):
-        def isin_mps_friendly(input, test):
-            return torch.isin(input, test)
+        # Signature must match upstream transformers 4.x exactly: callers in
+        # indextts use keyword args `elements=`/`test_elements=`. The previous
+        # `(input, test)` names caused:
+        #   isin_mps_friendly() got an unexpected keyword argument 'elements'
+        def isin_mps_friendly(elements, test_elements):
+            return torch.isin(elements, test_elements)
         _pytorch_utils.isin_mps_friendly = isin_mps_friendly
 
     if not hasattr(_pytorch_utils, 'find_pruneable_heads_and_indices'):

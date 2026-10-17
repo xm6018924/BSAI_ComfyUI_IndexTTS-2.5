@@ -631,6 +631,26 @@ class IndexTTSBridge:
         return self._proc.poll() is None
 
 
+def _venv_has_indextts(venv_python):
+    """Check that the dedicated venv is actually usable (indextts + torch present).
+
+    A venv directory may exist but be an empty/broken shell (missing torch or
+    indextts), e.g. when the venv was created but its install never completed.
+    Using it would make the bridge subprocess die with
+    `ModuleNotFoundError: No module named 'indextts'`. Probe it cheaply and
+    return False so the caller falls back to the main embedded python.
+    """
+    try:
+        import subprocess
+        r = subprocess.run(
+            [venv_python, "-c", "import torch, indextts"],
+            capture_output=True, timeout=60,
+        )
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
 def _get_venv_python():
     """Return the python to run the bridge subprocess in.
 
@@ -643,7 +663,8 @@ def _get_venv_python():
     """
     if os.environ.get("BSAI_INDEXTTS_DIRECT", "0") == "1":
         return None  # debug: force direct in-process synthesis
-    if os.path.isfile(_VENV_PYTHON) and os.path.isfile(_BRIDGE_SCRIPT):
+    if (os.path.isfile(_VENV_PYTHON) and os.path.isfile(_BRIDGE_SCRIPT)
+            and _venv_has_indextts(_VENV_PYTHON)):
         return _VENV_PYTHON
     if sys.executable:
         return sys.executable  # embedded python already ships indextts
@@ -1581,6 +1602,10 @@ class BSAI_IndexTTS2_5SaveAudio:
             "optional": {
                 "mp3_bitrate_MP3码率": ("INT", {"default": 192, "min": 64, "max": 320, "step": 32}),
                 "output_gain": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 4.0, "step": 0.05}),
+                # 兼容旧版工作流：双语化前该输入名为 audio_音频，改名 audio 后
+                # 旧 JSON 仍会传这个关键字，未加兼容会导致
+                # save_audio() got an unexpected keyword argument 'audio_音频'
+                "audio_音频": ("AUDIO",),
             },
         }
 
@@ -1590,7 +1615,9 @@ class BSAI_IndexTTS2_5SaveAudio:
     CATEGORY = "BSAI"
     OUTPUT_NODE = True
 
-    def save_audio(self, audio, filename_prefix="BSAI_IndexTTS2_5", format="wav", mp3_bitrate_MP3码率=192, output_gain=1.0):
+    def save_audio(self, audio, filename_prefix="BSAI_IndexTTS2_5", format="wav", mp3_bitrate_MP3码率=192, output_gain=1.0, audio_音频=None):
+        if audio is None:
+            audio = audio_音频
         waveform = audio["waveform"]
         sample_rate = audio["sample_rate"]
 
