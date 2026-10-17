@@ -353,19 +353,42 @@ try:
                 }
             def finalize(self, input_ids, final_beam_scores, final_beam_tokens,
                          final_beam_indices, pad_token_id=None, eos_token_id=None,
-                         beam_indices=None, decoder_prompt_len=None):
+                         max_length=None, beam_indices=None, decoder_prompt_len=None):
+                # 4.x-compatible finalize: reconstruct each beam's FULL sequence from
+                # `input_ids` (beam-expanded rows) using the last-step beam indices,
+                # rank by score and keep `num_beam_hyps_to_keep` best per batch.
+                # The previous shim only stitched the last single token, which made
+                # `sequences` 1 column wide -> empty after truncating the prompt.
                 batch_size = len(self._beam_hyps)
-                best = []
+                best_seqs = []
+                best_scores = []
                 for batch_idx in range(batch_size):
-                    if self._beam_hyps[batch_idx]:
-                        sorted_hyps = sorted(self._beam_hyps[batch_idx], key=lambda x: x[0])
-                        best.append(sorted_hyps[-1])
-                    else:
-                        best.append((final_beam_scores[batch_idx].item(),
-                                     final_beam_tokens[batch_idx].unsqueeze(0)))
-                sequences = torch.cat([x[1] for x in best], dim=0)
-                sequence_scores = torch.tensor([x[0] for x in best], device=final_beam_scores.device)
-                return sequences, sequence_scores
+                    hyps = []
+                    # final_beam_indices: [batch, n_tokens_to_keep] 2D; index maps to the
+                    # beam-expanded row space of `input_ids`.
+                    for beam_token_rank, index in enumerate(final_beam_indices[batch_idx]):
+                        batch_beam_idx = batch_idx * self.group_size + index.item()
+                        final_score = final_beam_scores[batch_beam_idx].item()
+                        final_tokens = input_ids[batch_beam_idx]
+                        beam_index = beam_indices[batch_beam_idx] if beam_indices is not None else None
+                        hyps.append((final_score, final_tokens, beam_index))
+                    # merge any hypotheses accumulated via process() (usually none in the shim)
+                    hyps.extend(self._beam_hyps[batch_idx])
+                    hyps = sorted(hyps, key=lambda x: x[0])
+                    hyps = hyps[-self.num_beam_hyps_to_keep:]
+                    for (score, tokens, _b_idx) in hyps:
+                        best_seqs.append(tokens)
+                        best_scores.append(score)
+                sequences = torch.stack(best_seqs, dim=0)
+                sequence_scores = torch.tensor(best_scores, device=final_beam_scores.device,
+                                               dtype=final_beam_scores.dtype)
+                # transformers 4.x finalize returns a dict-like object consumed
+                # via ["sequences"] / ["sequence_scores"] / ["beam_indices"]
+                return {
+                    "sequences": sequences,
+                    "sequence_scores": sequence_scores,
+                    "beam_indices": beam_indices,
+                }
 
         class ConstrainedBeamSearchScorer(BeamSearchScorer):
             def __init__(self, *args, constraints=None, **kwargs):
