@@ -183,7 +183,7 @@ _p(
         "    class SequenceSummary:\n"
         "        def __init__(self, *args, **kwargs):\n"
         "            raise NotImplementedError(\n"
-        "                \"SequenceSummary 在当前 transformers 版本已被移除；IndexTTS 的 TTS 路径不依赖 GPT2 multiple-choice 头。\"\n"
+        "                \"SequenceSummary has been removed in this transformers version; IndexTTS TTS path does not depend on the GPT2 multiple-choice head.\"\n"
         "            )\n"
     ),
     "SequenceSummary compat",
@@ -227,7 +227,7 @@ _p(
         "                        return text\n"
         "                self.zh_normalizer = _PassthroughNormalizer()\n"
         "                self.en_normalizer = _PassthroughNormalizer()\n"
-        "                print(\"[BSAI] wetext 不可用，已降级为原样文本归一化（数字/日期等不会自动转换）。\")\n"
+        "                print(\"[BSAI] wetext unavailable; fell back to passthrough text normalization (numbers/dates will not be auto-converted).\")\n"
     ),
     "wetext graceful fallback",
 )

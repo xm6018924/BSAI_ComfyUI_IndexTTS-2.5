@@ -35,7 +35,7 @@
         "portrait_input.png",
         "image"
       ],
-      "title": "源图像输入"
+      "title": "Source Image Input"
     },
     {
       "id": 2,
@@ -112,7 +112,7 @@
         "gaussian",
         "per_frame"
       ],
-      "title": "NPU 人脸检测 (Intel AI Boost)"
+      "title": "NPU Face Detection (Intel AI Boost)"
     },
     {
       "id": 3,
@@ -166,7 +166,7 @@
         2500,
         750
       ],
-      "title": "CPU 编排门 (显存水位决策)"
+      "title": "CPU Orchestration Gate (VRAM Watermark)"
     },
     {
       "id": 4,
@@ -201,7 +201,7 @@
         false,
         false
       ],
-      "title": "IndexTTS 模型加载器"
+      "title": "IndexTTS Model Loader"
     },
     {
       "id": 5,
@@ -233,7 +233,7 @@
       "widgets_values": [
         "reference.wav"
       ],
-      "title": "参考音色音频"
+      "title": "Reference Voice Audio"
     },
     {
       "id": 6,
@@ -267,7 +267,7 @@
       "widgets_values": [
         "minimax_h3_video_vae_fp16.safetensors"
       ],
-      "title": "视频 VAE 加载器"
+      "title": "Video VAE Loader"
     },
     {
       "id": 7,
@@ -311,7 +311,7 @@
         "auto",
         2500
       ],
-      "title": "VAE 编码路由 (auto)"
+      "title": "VAE Encode Routing (auto)"
     },
     {
       "id": 8,
@@ -355,7 +355,7 @@
         "auto",
         2500
       ],
-      "title": "VAE 解码路由 (auto→XPU 8190 worker)"
+      "title": "VAE Decode Routing (auto -> XPU 8190 worker)"
     },
     {
       "id": 9,
@@ -373,22 +373,22 @@
       "mode": 0,
       "inputs": [
         {
-          "name": "tts_model_TTS模型",
+          "name": "tts_model",
           "type": "INDEX_TTS_MODEL",
           "link": 4
         },
         {
-          "name": "text_文本",
+          "name": "text",
           "type": "STRING",
           "link": null
         },
         {
-          "name": "reference_audio_参考音频",
+          "name": "reference_audio",
           "type": "AUDIO",
           "link": 5
         },
         {
-          "name": "lang_语言",
+          "name": "lang",
           "type": "COMBO",
           "link": null
         }
@@ -429,7 +429,7 @@
         true,
         false
       ],
-      "title": "CUDA TTS 语音合成 (RTX 5090)"
+      "title": "CUDA TTS Synthesis (RTX 5090)"
     },
     {
       "id": 10,
@@ -447,7 +447,7 @@
       "mode": 0,
       "inputs": [
         {
-          "name": "audio_音频",
+          "name": "audio",
           "type": "AUDIO",
           "link": 6
         }
@@ -475,7 +475,7 @@
         192,
         1.0
       ],
-      "title": "保存合成语音"
+      "title": "Save Synthesized Speech"
     },
     {
       "id": 11,
@@ -504,7 +504,7 @@
         "cnr_id": "comfy-core"
       },
       "widgets_values": [],
-      "title": "语音预览"
+      "title": "Speech Preview"
     },
     {
       "id": 12,
@@ -533,7 +533,7 @@
         "cnr_id": "comfy-core"
       },
       "widgets_values": [],
-      "title": "XPU 解码预览"
+      "title": "XPU Decode Preview"
     },
     {
       "id": 13,
@@ -552,7 +552,7 @@
       "inputs": [],
       "outputs": [
         {
-          "name": "报告 / report",
+          "name": "report",
           "type": "STRING",
           "links": null
         }
@@ -564,7 +564,7 @@
         1000,
         true
       ],
-      "title": "多硬件监控 HUD (NPU/GPU/XPU/CPU)"
+      "title": "Multi-Hardware Monitor HUD (NPU/GPU/XPU/CPU)"
     },
     {
       "id": 14,
@@ -592,7 +592,7 @@
         "Node name for S&R": "BSAIOrchestratorStatus"
       },
       "widgets_values": [],
-      "title": "编排状态面板"
+      "title": "Orchestration Status Panel"
     },
     {
       "id": 15,
@@ -633,7 +633,7 @@
         "Node name for S&R": "BSAINPU_DepthEstimate"
       },
       "widgets_values": [],
-      "title": "NPU 深度估计 (DepthAnything-V2-Small, Intel AI Boost)"
+      "title": "NPU Depth Estimation (DepthAnything-V2-Small, Intel AI Boost)"
     },
     {
       "id": 16,
@@ -680,7 +680,7 @@
         0.9,
         false
       ],
-      "title": "NPU LLM 决策文本 (Qwen3-4B 对称INT4, Intel AI Boost)"
+      "title": "NPU LLM Decision Text (Qwen3-4B Symmetric INT4, Intel AI Boost)"
     },
     {
       "id": 17,
@@ -708,7 +708,7 @@
         "Node name for S&R": "ShowText"
       },
       "widgets_values": [],
-      "title": "NPU LLM 决策输出"
+      "title": "NPU LLM Decision Output"
     }
   ],
   "links": [

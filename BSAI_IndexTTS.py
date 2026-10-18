@@ -42,7 +42,7 @@ try:
         hardware=["cuda", "cpu"],
     )
 except Exception as _bsai_e:  # 注册失败不得拖垮插件
-    print(f"[BSAI SDK] BSAI-IndexTTS-2.5 注册失败(忽略): {_bsai_e}")
+    print(f"[BSAI SDK] BSAI-IndexTTS-2.5 registration failed (ignored): {_bsai_e}")
 # ==== BSAI SDK 块结束 ====
 
 
@@ -1225,7 +1225,7 @@ class BSAI_IndexTTS2_5Synthesis:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "tts_model_TTS模型": ("INDEX_TTS_MODEL",),
+                "tts_model": ("INDEX_TTS_MODEL",),
                 # 默认文本与默认语言(ZH)对齐，避免 英文文本+ZH 语言 的失配组合诱发退化生成
                 "text": ("STRING", {
                     "default": "同学们，今天我们来学习百声电影工厂的声音克隆功能。",
@@ -1264,7 +1264,7 @@ class BSAI_IndexTTS2_5Synthesis:
                 "top_p": ("FLOAT", {
                     "default": 0.8, "min": 0.1, "max": 1.0, "step": 0.05,
                 }),
-                "top_k_TopK采样": ("INT", {
+                "top_k": ("INT", {
                     "default": 30, "min": 1, "max": 100, "step": 1,
                 }),
                 "length_penalty": ("FLOAT", {
@@ -1288,7 +1288,7 @@ class BSAI_IndexTTS2_5Synthesis:
 
     def synthesize(
         self,
-        tts_model_TTS模型,
+        tts_model,
         text,
         reference_audio,
         lang="ZH",
@@ -1303,7 +1303,7 @@ class BSAI_IndexTTS2_5Synthesis:
         max_mel_tokens=1500,
         temperature=0.8,
         top_p=0.8,
-        top_k_TopK采样=30,
+        top_k=30,
         length_penalty=0.0,
         num_beams=3,
         repetition_penalty=10.0,
@@ -1357,7 +1357,7 @@ class BSAI_IndexTTS2_5Synthesis:
         generation_kwargs = {
             "temperature": temperature,
             "top_p": top_p,
-            "top_k": top_k_TopK采样,
+            "top_k": top_k,
             "length_penalty": length_penalty,
             "num_beams": num_beams,
             "repetition_penalty": repetition_penalty,
@@ -1388,12 +1388,12 @@ class BSAI_IndexTTS2_5Synthesis:
                 try:
                     _bsai_alloc = BSAIOrch.allocate("tts_infer", requester="8191")
                     if not _bsai_alloc.ok:
-                        print(f"[BSAI_IndexTTS2.5] SDK 未取得 tts_infer 租约({_bsai_alloc.reason})，仍按原逻辑合成")
+                        print(f"[BSAI_IndexTTS2.5] SDK did not acquire tts_infer lease ({_bsai_alloc.reason}); synthesizing without lease")
                 except Exception as _bsai_ae:
-                    print(f"[BSAI_IndexTTS2.5] SDK allocate 异常(忽略): {_bsai_ae}")
+                    print(f"[BSAI_IndexTTS2.5] SDK allocate exception (ignored): {_bsai_ae}")
                     _bsai_alloc = None
                 try:
-                    tts_model_TTS模型.infer(
+                    tts_model.infer(
                         spk_audio_prompt=ref_audio_path,
                         text=text,
                         output_path=out_audio_path,
@@ -1461,7 +1461,7 @@ class BSAI_IndexTTS2_5Synthesis:
                         f"BSAI_IndexTTS25_degenerate_{time.strftime('%Y%m%d_%H%M%S')}.wav",
                     )
                     _save_audio_file(_diag_path, audio_waveform, audio_sr)
-                    print(f"[BSAI_IndexTTS2.5] 退化样本已留存诊断: {_diag_path}")
+                    print(f"[BSAI_IndexTTS2.5] Degenerate sample saved for diagnostics: {_diag_path}")
                 except Exception:
                     pass
 
@@ -1481,8 +1481,8 @@ class BSAI_IndexTTS2_5Synthesis:
                     if _finite_ok and _sat_n < 0.3 and _zcr < 0.25 and _uniq > 80:
                         _norm_rms = float(torch.sqrt((_nf ** 2).mean()).item())
                         print(
-                            f"[BSAI_IndexTTS2.5] 高电平输出({reason})，峰值正常化后通过"
-                            f"(rms={_norm_rms:.3f}, zcr={_zcr:.3f}, uniq={_uniq})，已放行"
+                            f"[BSAI_IndexTTS2.5] High-level output ({reason}); peak-normalized and passed"
+                            f"(rms={_norm_rms:.3f}, zcr={_zcr:.3f}, uniq={_uniq})"
                         )
                         audio_waveform = _norm
                         audio_dict = _audio_tensor_to_dict(audio_waveform, audio_sr)
@@ -1497,23 +1497,23 @@ class BSAI_IndexTTS2_5Synthesis:
 
                 # 退化 → 重试
                 attempt += 1
-                print(f"[BSAI_IndexTTS2.5] WARNING: 检测到退化音频 ({reason})，触发保护重试 {attempt}/{max_attempts}...")
+                print(f"[BSAI_IndexTTS2.5] WARNING: Detected degenerate audio ({reason}); triggering protected retry {attempt}/{max_attempts}...")
                 if attempt >= max_attempts:
                     raise RuntimeError(
-                        f"IndexTTS-2.5 连续 {max_attempts} 次生成退化音频（{reason}），已拒绝输出。"
-                        f"建议：1) 保持 Loader 节点 use_bf16 关闭（fp32 数值最稳定）；"
-                        f"2) 更换参考音频或缩短文本后重试。"
+                        f"IndexTTS-2.5 produced degenerate audio {max_attempts} times in a row ({reason}); output rejected. "
+                        f"Suggestions: 1) Keep the Loader node's use_bf16 turned off (fp32 is numerically most stable); "
+                        f"2) Try a different reference audio or shorten the text and retry."
                     )
-                if getattr(tts_model_TTS模型, "dtype", None) is not None:
-                    _old_dev = getattr(tts_model_TTS模型, "device", "auto")
-                    _old_emo = getattr(tts_model_TTS模型, "qwen_emo", None)
+                if getattr(tts_model, "dtype", None) is not None:
+                    _old_dev = getattr(tts_model, "device", "auto")
+                    _old_emo = getattr(tts_model, "qwen_emo", None)
                     _unload_indextts()
-                    tts_model_TTS模型 = _get_indextts(
+                    tts_model = _get_indextts(
                         use_bf16=False,
                         device=_old_dev,
                         use_qwen_emo=_old_emo is not None,
                     )
-                    print("[BSAI_IndexTTS2.5] 已自动卸载并降级为 fp32 实例，重试合成...")
+                    print("[BSAI_IndexTTS2.5] Automatically unloaded and fell back to fp32 instance; retrying synthesis...")
         except Exception as e:
             error_msg = f"TTS synthesis failed: {e}"
             print(f"[BSAI_IndexTTS2.5] ERROR: {error_msg}")
@@ -1600,12 +1600,12 @@ class BSAI_IndexTTS2_5SaveAudio:
                 "format": (["wav", "mp3", "flac"], {"default": "wav"}),
             },
             "optional": {
-                "mp3_bitrate_MP3码率": ("INT", {"default": 192, "min": 64, "max": 320, "step": 32}),
+                "mp3_bitrate": ("INT", {"default": 192, "min": 64, "max": 320, "step": 32}),
                 "output_gain": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 4.0, "step": 0.05}),
-                # 兼容旧版工作流：双语化前该输入名为 audio_音频，改名 audio 后
-                # 旧 JSON 仍会传这个关键字，未加兼容会导致
-                # save_audio() got an unexpected keyword argument 'audio_音频'
-                "audio_音频": ("AUDIO",),
+                # Legacy compat alias: older workflows named this input "audio_音频";
+                # renamed to "audio" in required. Old JSON that still passes this
+                # keyword will not crash save_audio().
+                "audio_legacy": ("AUDIO",),
             },
         }
 
@@ -1615,9 +1615,9 @@ class BSAI_IndexTTS2_5SaveAudio:
     CATEGORY = "BSAI"
     OUTPUT_NODE = True
 
-    def save_audio(self, audio, filename_prefix="BSAI_IndexTTS2_5", format="wav", mp3_bitrate_MP3码率=192, output_gain=1.0, audio_音频=None):
+    def save_audio(self, audio, filename_prefix="BSAI_IndexTTS2_5", format="wav", mp3_bitrate=192, output_gain=1.0, audio_legacy=None):
         if audio is None:
-            audio = audio_音频
+            audio = audio_legacy
         waveform = audio["waveform"]
         sample_rate = audio["sample_rate"]
 

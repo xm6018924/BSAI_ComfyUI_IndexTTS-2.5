@@ -84,28 +84,28 @@
       "title": "Text-Based Emotion Synthesis",
       "inputs": [
         {
-          "name": "tts_model_TTS模型",
+          "name": "tts_model",
           "type": "INDEX_TTS_MODEL",
           "link": 1
         },
         {
-          "name": "text_文本",
+          "name": "text",
           "type": "STRING",
           "widget": {
-            "name": "text_文本"
+            "name": "text"
           },
           "link": null
         },
         {
-          "name": "reference_audio_参考音频",
+          "name": "reference_audio",
           "type": "AUDIO",
           "link": 2
         },
         {
-          "name": "lang_语言",
+          "name": "lang",
           "type": "COMBO",
           "widget": {
-            "name": "lang_语言"
+            "name": "lang"
           },
           "link": null
         }
@@ -135,7 +135,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio_音频",
+          "name": "audio",
           "type": "AUDIO",
           "link": 3
         }
@@ -164,7 +164,7 @@
           "link": 4
         }
       ],
-      "title": "预览音频"
+      "title": "Preview Audio"
     }
   ],
   "links": [

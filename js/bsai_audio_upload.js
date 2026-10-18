@@ -1,7 +1,7 @@
 /**
  * BSAI Audio Upload Extension
  *
- * Adds "加载音频" (Load Audio) button and an audio player bar with
+ * Adds a "Load Audio" button and an audio player bar with
  * progress bar and time display to BSAI_IndexTTS2.5LoadAudio nodes.
  */
 
@@ -18,7 +18,7 @@ app.registerExtension({
         nodeType.prototype.onNodeCreated = function () {
             onNodeCreated?.apply(this, arguments);
 
-            const audioWidget = this.widgets?.find((w) => w.name === "audio_音频" || w.name === "audio");
+            const audioWidget = this.widgets?.find((w) => w.name === "audio" || w.name === "audio_legacy");
             if (!audioWidget) {
                 setTimeout(() => setupUpload(this), 0);
                 return;
@@ -36,7 +36,7 @@ function formatTime(sec) {
 }
 
 function setupUpload(node) {
-    const audioWidget = node.widgets?.find((w) => w.name === "audio_音频" || w.name === "audio");
+    const audioWidget = node.widgets?.find((w) => w.name === "audio" || w.name === "audio_legacy");
     if (!audioWidget) return;
     if (node._bsaiUploadSetup) return;
     node._bsaiUploadSetup = true;
@@ -44,7 +44,7 @@ function setupUpload(node) {
     const wrapper = document.createElement("div");
     wrapper.style.cssText = "width: 100%; padding: 2px 0;";
 
-    // --- 加载音频 button ---
+    // --- Load Audio button ---
     const loadBtn = document.createElement("button");
     loadBtn.textContent = "📁 Load Audio";
     loadBtn.style.cssText = `

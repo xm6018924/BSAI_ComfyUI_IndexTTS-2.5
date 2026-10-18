@@ -69,7 +69,7 @@
         0,
         0,
         0,
-        "happy 开心"
+        "happy"
       ],
       "color": "#363",
       "bgcolor": "#575",
@@ -98,7 +98,7 @@
         0,
         0,
         0,
-        "angry 愤怒"
+        "angry"
       ],
       "color": "#633",
       "bgcolor": "#844",
@@ -142,33 +142,33 @@
       "title": "Happy Emotion Synthesis",
       "inputs": [
         {
-          "name": "tts_model_TTS模型",
+          "name": "tts_model",
           "type": "INDEX_TTS_MODEL",
           "link": 1
         },
         {
-          "name": "text_文本",
+          "name": "text",
           "type": "STRING",
           "widget": {
-            "name": "text_文本"
+            "name": "text"
           },
           "link": null
         },
         {
-          "name": "reference_audio_参考音频",
+          "name": "reference_audio",
           "type": "AUDIO",
           "link": 2
         },
         {
-          "name": "lang_语言",
+          "name": "lang",
           "type": "COMBO",
           "widget": {
-            "name": "lang_语言"
+            "name": "lang"
           },
           "link": null
         },
         {
-          "name": "emo_vector_情绪向量",
+          "name": "emo_vector",
           "type": "EMO_VECTOR",
           "link": 3
         }
@@ -212,33 +212,33 @@
       "title": "Angry Emotion Synthesis",
       "inputs": [
         {
-          "name": "tts_model_TTS模型",
+          "name": "tts_model",
           "type": "INDEX_TTS_MODEL",
           "link": 6
         },
         {
-          "name": "text_文本",
+          "name": "text",
           "type": "STRING",
           "widget": {
-            "name": "text_文本"
+            "name": "text"
           },
           "link": null
         },
         {
-          "name": "reference_audio_参考音频",
+          "name": "reference_audio",
           "type": "AUDIO",
           "link": 7
         },
         {
-          "name": "lang_语言",
+          "name": "lang",
           "type": "COMBO",
           "widget": {
-            "name": "lang_语言"
+            "name": "lang"
           },
           "link": null
         },
         {
-          "name": "emo_vector_情绪向量",
+          "name": "emo_vector",
           "type": "EMO_VECTOR",
           "link": 8
         }
@@ -268,7 +268,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio_音频",
+          "name": "audio",
           "type": "AUDIO",
           "link": 4
         }
@@ -298,7 +298,7 @@
       "bgcolor": "#355",
       "inputs": [
         {
-          "name": "audio_音频",
+          "name": "audio",
           "type": "AUDIO",
           "link": 9
         }
@@ -327,7 +327,7 @@
           "link": 5
         }
       ],
-      "title": "预览音频-开心"
+      "title": "Preview Audio - Happy"
     },
     {
       "id": 10,
@@ -352,7 +352,7 @@
           "link": 10
         }
       ],
-      "title": "预览音频-愤怒"
+      "title": "Preview Audio - Angry"
     }
   ],
   "links": [
