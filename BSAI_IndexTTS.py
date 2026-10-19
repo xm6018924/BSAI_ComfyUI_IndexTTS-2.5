@@ -1228,7 +1228,7 @@ class BSAI_IndexTTS2_5Synthesis:
                 "tts_model": ("INDEX_TTS_MODEL",),
                 # 默认文本与默认语言(ZH)对齐，避免 英文文本+ZH 语言 的失配组合诱发退化生成
                 "text": ("STRING", {
-                    "default": "同学们，今天我们来学习百声电影工厂的声音克隆功能。",
+                    "default": "Hello everyone, this is a demo of the BSAI Film Factory voice cloning feature.",
                     "multiline": True,
                 }),
                 "reference_audio": ("AUDIO",),
