@@ -1531,6 +1531,31 @@ class BSAI_IndexTTS2_5Synthesis:
 # ===========================================================================
 #  Node 2b: BSAI_IndexTTS2.5EmotionVector (helper)
 # ===========================================================================
+# 旧版双语 preset 标签（e788439 引入、2499074 移除）：兼容老工作流 JSON 保存值
+_BSAI_EMO_PRESET_LEGACY = [
+    "none 无",
+    "happy 开心",
+    "angry 愤怒",
+    "sad 悲伤",
+    "fear 恐惧",
+    "disgust 厌恶",
+    "melancholy 忧郁",
+    "surprise 惊讶",
+    "calm 平静",
+]
+_BSAI_EMO_PRESET_LEGACY_MAP = {
+    "none 无": "none",
+    "happy 开心": "happy",
+    "angry 愤怒": "angry",
+    "sad 悲伤": "sad",
+    "fear 恐惧": "fear",
+    "disgust 厌恶": "disgust",
+    "melancholy 忧郁": "melancholy",
+    "surprise 惊讶": "surprise",
+    "calm 平静": "calm",
+}
+
+
 class BSAI_IndexTTS2_5EmotionVector:
     """
     Construct an 8-dimensional emotion vector for IndexTTS-2.5.
@@ -1551,7 +1576,9 @@ class BSAI_IndexTTS2_5EmotionVector:
                 "surprise": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
                 "calm": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
                 "preset": (["none", "happy", "angry", "sad", "fear", "disgust",
-                            "melancholy", "surprise", "calm"], {"default": "none"}),
+                            "melancholy", "surprise", "calm"]
+                           + _BSAI_EMO_PRESET_LEGACY,  # 尾部 9 项为旧版标签：兼容老工作流 JSON 保存值
+                           {"default": "none"}),
             },
         }
 
@@ -1561,6 +1588,8 @@ class BSAI_IndexTTS2_5EmotionVector:
     CATEGORY = "BSAI"
 
     def build_vector(self, happy, angry, sad, fear, disgust, melancholy, surprise, calm, preset="none"):
+        # 旧版中文双语标签归一化：兼容老工作流 JSON 保存值（旧标签 = 英文标签 + 空格 + 中文）
+        preset = _BSAI_EMO_PRESET_LEGACY_MAP.get(preset, preset)
         # Apply preset if selected (overrides individual values)
         presets = {
             "happy":      [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
