@@ -1576,8 +1576,7 @@ class BSAI_IndexTTS2_5EmotionVector:
                 "surprise": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
                 "calm": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
                 "preset": (["none", "happy", "angry", "sad", "fear", "disgust",
-                            "melancholy", "surprise", "calm"]
-                           + _BSAI_EMO_PRESET_LEGACY,  # 尾部 9 项为旧版标签：兼容老工作流 JSON 保存值
+                            "melancholy", "surprise", "calm"],
                            {"default": "none"}),
             },
         }
