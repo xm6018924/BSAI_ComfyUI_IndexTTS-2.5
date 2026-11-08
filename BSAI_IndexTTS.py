@@ -1101,18 +1101,96 @@ class BSAI_IndexTTS2_5LoadAudio:
     CATEGORY = "BSAI"
     OUTPUT_NODE = True
 
+    AUDIO_EXTS = ('.wav', '.mp3', '.flac', '.ogg', '.m4a')
+
+    @classmethod
+    def _input_audio_files(cls):
+        """Bare file names of the audio files offered by the combo widget."""
+        input_dir = folder_paths.get_input_directory()
+        if not os.path.isdir(input_dir):
+            return []
+        try:
+            return sorted(f for f in os.listdir(input_dir)
+                          if f.lower().endswith(cls.AUDIO_EXTS))
+        except Exception:
+            return []
+
+    @staticmethod
+    def _bare_audio_name(value):
+        """True when value is a plain file name (no path, drive or share)."""
+        text = str(value or "").strip()
+        if not text or text.startswith("upload_"):
+            return False
+        if text[0:2] in ("\\\\", "//"):
+            return False
+        if ".." in text:
+            return False
+        return not os.path.dirname(text)
+
+    @classmethod
+    def _safe_input_path(cls, value):
+        """realpath of a bare audio name inside the input folder, or None."""
+        if not cls._bare_audio_name(value):
+            return None
+        input_dir = os.path.realpath(folder_paths.get_input_directory())
+        candidate = os.path.realpath(os.path.join(input_dir, str(value).strip()))
+        try:
+            if os.path.commonpath([input_dir, candidate]) != input_dir:
+                return None
+        except ValueError:
+            return None
+        return candidate if os.path.isfile(candidate) else None
+
+    @classmethod
+    def _confine_input_file(cls, path):
+        """realpath of an absolute path if it lies inside the input folder."""
+        text = str(path or "").strip()
+        if not text or text[0:2] in ("\\\\", "//"):
+            return None
+        if ".." in [p for p in text.replace("\\", "/").split("/")]:
+            return None
+        input_dir = os.path.realpath(folder_paths.get_input_directory())
+        real = os.path.realpath(text)
+        try:
+            if os.path.commonpath([input_dir, real]) != input_dir:
+                return None
+        except ValueError:
+            return None
+        return real if os.path.isfile(real) else None
+
+    @classmethod
+    def _resolve_audio(cls, audio):
+        """Resolve the widget value to a file inside the input folder, or None.
+
+        folder_paths.get_annotated_filepath is only confined from ComfyUI
+        v0.28, so its result is checked here again: on older builds a shared
+        workflow could otherwise point it at any file on the host.
+        """
+        try:
+            annotated = folder_paths.get_annotated_filepath(audio)
+        except Exception:
+            annotated = None
+        return cls._confine_input_file(annotated) or cls._safe_input_path(audio)
+
     @classmethod
     def VALIDATE_INPUTS(cls, audio):
-        # Don't reject placeholder filenames during validation — users will
-        # upload their own files before executing. File existence is checked
-        # at execution time in load_audio() with a clear error message.
-        return True
+        # The list check stays on: this node decodes the value and returns it
+        # as its audio output, so only the files the widget offers are allowed.
+        text = str(audio or "").strip()
+        if text.startswith("upload_"):
+            return True
+        if text in cls._input_audio_files():
+            return True
+        return ("Invalid audio file: select one of the files listed from the "
+                "ComfyUI input folder, or upload the file with the upload button.")
 
     @classmethod
     def IS_CHANGED(cls, audio):
         try:
             import hashlib
-            audio_path = folder_paths.get_annotated_filepath(audio)
+            audio_path = cls._resolve_audio(audio)
+            if not audio_path:
+                return ""
             m = hashlib.sha256()
             with open(audio_path, 'rb') as f:
                 m.update(f.read())
@@ -1124,26 +1202,22 @@ class BSAI_IndexTTS2_5LoadAudio:
         if not audio or audio.startswith("upload_"):
             raise ValueError("Please upload an audio file using the upload button, or select one from the dropdown.")
 
-        audio_path = folder_paths.get_annotated_filepath(audio)
-        if not os.path.isfile(audio_path):
-            # Try input directory directly
-            input_dir = folder_paths.get_input_directory()
-            audio_path = os.path.join(input_dir, audio)
-            if not os.path.isfile(audio_path):
-                # Generate a silent placeholder so the workflow can execute
-                # without crashing. The user will see a warning and should
-                # upload their own reference audio for proper voice cloning.
-                print(f"[BSAI_IndexTTS2.5] WARNING: Audio file '{audio}' not found. "
-                      f"Using a 3-second silent placeholder. "
-                      f"Please upload your own audio file for voice cloning.")
-                sample_rate = 22050
-                duration = 3
-                waveform = torch.zeros(1, duration * sample_rate)
-                audio_dict = {
-                    "waveform": waveform.unsqueeze(0),
-                    "sample_rate": sample_rate,
-                }
-                return (audio_dict,)
+        audio_path = self._resolve_audio(audio)
+        if not audio_path:
+            # Generate a silent placeholder so the workflow can execute
+            # without crashing. The user will see a warning and should
+            # upload their own reference audio for proper voice cloning.
+            print(f"[BSAI_IndexTTS2.5] WARNING: Audio file '{audio}' not found. "
+                  f"Using a 3-second silent placeholder. "
+                  f"Please upload your own audio file for voice cloning.")
+            sample_rate = 22050
+            duration = 3
+            waveform = torch.zeros(1, duration * sample_rate)
+            audio_dict = {
+                "waveform": waveform.unsqueeze(0),
+                "sample_rate": sample_rate,
+            }
+            return (audio_dict,)
 
         print(f"[BSAI_IndexTTS2.5] Loading audio: {audio_path}")
 
