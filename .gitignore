@@ -36,3 +36,8 @@ models/
 # Temp files
 *.tmp
 *.bak
+
+# local archives / scratch (kept on disk, not versioned)
+*.rar
+/fix_workflows.py
+/workflow_example/报错.txt
