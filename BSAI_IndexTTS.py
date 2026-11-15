@@ -11,6 +11,7 @@ Nodes:
 
 import os
 import sys
+import ntpath
 import json
 import tempfile
 import traceback
@@ -54,6 +55,25 @@ except Exception as _bsai_e:  # 注册失败不得拖垮插件
 # ---------------------------------------------------------------------------
 _torchaudio_save_orig = torchaudio.save
 _torchaudio_load_orig = torchaudio.load
+
+
+def _unsafe_prefix_reason(prefix):
+    """String-level check for filename_prefix, run before any path join.
+
+    Windows resolves "C:\\x", "\\\\host\\share" and "\\x" as rooted and contacts
+    that host on the first stat/open; ".." components can also leave the output
+    directory. Sub-directories such as "audio/take" stay allowed.
+    """
+    text = str(prefix or "")
+    if not text.strip():
+        return "empty filename_prefix"
+    norm = text.replace("/", "\\")
+    drive, _tail = ntpath.splitdrive(norm)
+    if drive or norm.startswith("\\"):
+        return "absolute path, drive letter or network share"
+    if ".." in [p for p in text.replace("\\", "/").split("/")]:
+        return "'..' path component"
+    return ""
 
 
 def _torchaudio_save_patched(filepath, src, sample_rate, **kwargs):
@@ -1735,6 +1755,11 @@ class BSAI_IndexTTS2_5SaveAudio:
         output_dir_real = os.path.realpath(output_dir)
 
         # Find unique filename
+        bad_prefix = _unsafe_prefix_reason(filename_prefix)
+        if bad_prefix:
+            raise ValueError(
+                "filename_prefix rejected before any file access: " + bad_prefix
+            )
         base_name = filename_prefix
         counter = 1
         while True:
